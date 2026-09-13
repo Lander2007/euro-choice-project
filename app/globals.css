@@ -1,0 +1,210 @@
+@import url('https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600;700&family=IBM+Plex+Sans:wght@300;400;500;600;700&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Oswald:wght@500;600;700&display=swap');
+
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* ── Design tokens ────────────────────────────────────────────── */
+:root {
+  --ink:        #1E1B16;
+  --parchment:  #F3ECDA;
+  --panel:      #FAF7F0;
+  --hazard:     #E3B23C;
+  --valve-red:  #C1402A;
+  --steel:      #6E6A5E;
+  --steel-light:#9A9589;
+  --border:     #D4CCB8;
+  --border-dark:#3A3530;
+}
+
+* { box-sizing: border-box; }
+
+body {
+  background-color: var(--parchment);
+  color: var(--ink);
+  font-family: 'IBM Plex Sans', sans-serif;
+  -webkit-font-smoothing: antialiased;
+}
+
+/* ── Typography helpers ────────────────────────────────────────── */
+.font-stencil {
+  font-family: 'Oswald', sans-serif;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+.font-mono { font-family: 'IBM Plex Mono', monospace; }
+
+/* ── Surface classes ───────────────────────────────────────────── */
+
+/* Dark metal nameplate — header, dark cards */
+.nameplate {
+  background: #1E1B16;
+  border: 1px solid #3A3530;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.25);
+}
+
+/* Light engineering panel — content cards on parchment canvas */
+.eng-panel {
+  background: var(--panel);
+  border: 1px solid var(--border);
+  box-shadow: 0 1px 4px rgba(30,27,22,0.06);
+}
+
+/* Parchment inset — blueprint-bg tables, form insets */
+.blueprint-bg {
+  background-color: #EDE5CE;
+  background-image:
+    linear-gradient(rgba(110,106,94,0.14) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(110,106,94,0.14) 1px, transparent 1px);
+  background-size: 24px 24px;
+}
+
+/* ── Rivet ─────────────────────────────────────────────────────── */
+.rivet {
+  width: 9px;
+  height: 9px;
+  flex-shrink: 0;
+  background: radial-gradient(circle at 35% 30%, #5A5550, #2A2520);
+  border-radius: 50%;
+  border: 1px solid #2A2520;
+  box-shadow: inset 0 1px 2px rgba(0,0,0,0.5), 0 1px 0 rgba(255,255,255,0.08);
+}
+
+/* ── LED status indicators ─────────────────────────────────────── */
+.led {
+  width: 11px;
+  height: 11px;
+  border-radius: 50%;
+  flex-shrink: 0;
+  display: inline-block;
+  border: 1.5px solid rgba(0,0,0,0.2);
+}
+/* Colours: clean, no neon glow — just realistic lamp brightness */
+.led-green  { background: radial-gradient(circle at 38% 32%, #8AE06A, #2E8018); }
+.led-yellow { background: radial-gradient(circle at 38% 32%, #F2D96A, #C49020); }
+.led-red    { background: radial-gradient(circle at 38% 32%, #E87060, #A83020); }
+.led-amber  { background: radial-gradient(circle at 38% 32%, #F0A840, #B06810); }
+.led-grey   { background: radial-gradient(circle at 38% 32%, #9A9589, #55524A); }
+
+/* ── Nav item (sidebar) ─────────────────────────────────────────── */
+.nav-item {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 12px;
+  border-radius: 2px;
+  border: 1px solid transparent;
+  cursor: pointer;
+  transition: background 0.12s, border-color 0.12s;
+}
+.nav-item:hover {
+  background: rgba(243,236,218,0.06);
+  border-color: rgba(58,53,48,0.8);
+}
+.nav-item.active {
+  background: rgba(227,178,60,0.12);
+  border-color: rgba(227,178,60,0.45);
+}
+
+/* ── Blueprint table ─────────────────────────────────────────────── */
+.table-wrap {
+  border: 1px solid var(--border);
+  border-radius: 2px;
+  overflow: hidden;
+}
+.table-wrap table { width: 100%; border-collapse: collapse; }
+.table-wrap thead tr { background: var(--ink); }
+.table-wrap thead th {
+  font-family: 'Oswald', sans-serif;
+  font-size: 11px;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: #9A9589;
+  padding: 10px 14px;
+  text-align: left;
+  font-weight: 500;
+}
+.table-wrap tbody tr {
+  border-bottom: 1px solid var(--border);
+  transition: background 0.1s;
+}
+.table-wrap tbody tr:last-child { border-bottom: none; }
+.table-wrap tbody tr:hover { background: rgba(227,178,60,0.04); }
+
+/* ── Gauge needle animation (one deliberate load animation) ─────── */
+@keyframes needleSweep {
+  from { transform: rotate(-130deg); }
+}
+/* applied inline via CSS transition after mount */
+
+/* ── Form controls ──────────────────────────────────────────────── */
+.ctrl-input, .ctrl-select {
+  font-family: 'IBM Plex Mono', monospace;
+  font-size: 12px;
+  padding: 8px 12px;
+  background: var(--panel);
+  border: 1px solid var(--border);
+  color: var(--ink);
+  border-radius: 2px;
+  outline: none;
+  transition: border-color 0.12s;
+}
+.ctrl-input:focus, .ctrl-select:focus {
+  border-color: var(--hazard);
+}
+
+/* ── Buttons ────────────────────────────────────────────────────── */
+.btn-primary {
+  font-family: 'Oswald', sans-serif;
+  font-size: 13px;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  padding: 10px 20px;
+  background: var(--hazard);
+  color: var(--ink);
+  border: 1px solid #C49020;
+  border-radius: 2px;
+  cursor: pointer;
+  transition: background 0.12s, opacity 0.12s;
+}
+.btn-primary:hover { background: #D4A230; }
+.btn-primary:disabled {
+  background: #D4CCB8;
+  color: #9A9589;
+  border-color: #C4BAA0;
+  cursor: not-allowed;
+}
+.btn-secondary {
+  font-family: 'Oswald', sans-serif;
+  font-size: 12px;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  padding: 8px 14px;
+  background: transparent;
+  color: var(--steel);
+  border: 1px solid var(--border);
+  border-radius: 2px;
+  cursor: pointer;
+  transition: border-color 0.12s, color 0.12s;
+}
+.btn-secondary:hover { border-color: var(--steel); color: var(--ink); }
+.btn-ghost {
+  font-family: 'Oswald', sans-serif;
+  font-size: 11px;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  padding: 6px 12px;
+  background: transparent;
+  color: var(--steel-light);
+  border: 1px solid transparent;
+  border-radius: 2px;
+  cursor: pointer;
+}
+.btn-ghost:hover { border-color: var(--border); color: var(--ink); }
+
+/* ── Scrollbar ──────────────────────────────────────────────────── */
+::-webkit-scrollbar { width: 5px; height: 5px; }
+::-webkit-scrollbar-track { background: transparent; }
+::-webkit-scrollbar-thumb { background: var(--border); border-radius: 2px; }
+::-webkit-scrollbar-thumb:hover { background: var(--steel-light); }
