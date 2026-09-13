@@ -2,179 +2,129 @@
 import { useEffect, useState } from "react";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
+import { cap, useApp, type Role } from "../store/AppStore";
 
-const NAV_ITEMS = [
-  { path: "/dashboard",    label: "Dashboard",          code: "DSH" },
-  { path: "/tasks",        label: "Tasks & Jobs",        code: "TSK" },
-  { path: "/certificates", label: "Certificates",        code: "CRT" },
-  { path: "/roles",        label: "Roles & Permissions", code: "RLS" },
+const ALL_NAV = [
+  { path: "/dashboard",    label: "Dashboard",           roles: ["requester", "receiver", "approver", "admin"] as Role[] },
+  { path: "/tasks",        label: "Tasks & Jobs",        roles: ["requester", "receiver", "approver", "admin"] as Role[] },
+  { path: "/certificates", label: "Certificates",        roles: ["receiver", "approver", "admin"] as Role[] },
+  { path: "/roles",        label: "Roles & Permissions", roles: ["approver", "admin"] as Role[] },
 ];
 
 export default function AppLayout({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
   const router   = useRouter();
-  const [user, setUser] = useState("");
-  const [role, setRole] = useState("");
+  const { user, role, logout } = useApp();
+  const [drawerOpen, setDrawerOpen] = useState(false);
 
   useEffect(() => {
-    setUser(localStorage.getItem("prtcms_user") || "Unknown Operator");
-    setRole(localStorage.getItem("prtcms_role") || "requester");
-  }, []);
+    if (!user) router.push("/");
+  }, [user, router]);
+
+  useEffect(() => {
+    setDrawerOpen(false);
+  }, [pathname]);
 
   const handleLogout = () => {
-    localStorage.removeItem("prtcms_user");
-    localStorage.removeItem("prtcms_role");
+    logout();
     router.push("/");
   };
 
+  const navItems = ALL_NAV.filter((n) => n.roles.includes(role));
+
+  const nav = (
+    <nav className="flex-1">
+      {navItems.map((item) => {
+        const isActive = pathname === item.path || pathname.startsWith(item.path + "/");
+        return (
+          <Link key={item.path} href={item.path} style={{ textDecoration: "none" }}>
+            <div className={`nav-item ${isActive ? "active" : ""}`}>{item.label}</div>
+          </Link>
+        );
+      })}
+    </nav>
+  );
+
   return (
-    <div className="min-h-screen flex flex-col" style={{ background: "#F3ECDA" }}>
+    <div className="min-h-screen flex flex-col" style={{ background: "var(--bg)" }}>
 
-      {/* ── Header nameplate ─────────────────────────────────────── */}
-      <header className="nameplate" style={{ position: "sticky", top: 0, zIndex: 40 }}>
-        <div className="flex items-center justify-between px-6 py-3">
-
-          {/* Brand */}
-          <div className="flex items-center gap-3">
-            <div className="rivet" />
-            <div className="rivet" />
-            <div className="ml-2">
-              <div
-                className="font-stencil font-bold"
-                style={{ color: "#E3B23C", fontSize: 18, letterSpacing: "0.1em" }}
-              >
-                PRTCMS
-              </div>
-              <div className="font-mono" style={{ color: "#6E6A5E", fontSize: 10 }}>
-                Petroleum Refinery Task &amp; Certificate Management
-              </div>
+      {/* ── Top bar ── */}
+      <header
+        className="chrome flex items-center justify-between px-4 md:px-6 py-3"
+        style={{ borderBottom: "1px solid var(--chrome-border)", position: "sticky", top: 0, zIndex: 40 }}
+      >
+        <div className="flex items-center gap-3">
+          <button
+            className="btn-ghost md:hidden"
+            onClick={() => setDrawerOpen((o) => !o)}
+            aria-label="Toggle navigation"
+            aria-expanded={drawerOpen}
+            style={{ fontSize: 20, lineHeight: 1, color: "#E5E5E5" }}
+          >
+            ☰
+          </button>
+          <div>
+            <div className="text-base font-bold" style={{ color: "#FFFFFF" }}>PRTCMS</div>
+            <div className="text-xs hidden sm:block" style={{ color: "var(--chrome-muted)" }}>
+              Petroleum Refinery Task &amp; Certificate Management
             </div>
-            <div
-              style={{
-                width: 1,
-                height: 32,
-                background: "#3A3530",
-                marginLeft: 12,
-                marginRight: 4,
-              }}
-            />
-            <div className="flex items-center gap-1.5 ml-1">
-              <div className="led led-green" />
-              <span className="font-mono" style={{ color: "#6E6A5E", fontSize: 11 }}>System Online</span>
-            </div>
-          </div>
-
-          {/* Operator info */}
-          <div className="flex items-center gap-5">
-            <div className="text-right">
-              <div className="font-sans text-sm font-medium" style={{ color: "#F3ECDA" }}>
-                {user}
-              </div>
-              <div className="font-stencil text-xs" style={{ color: "#E3B23C" }}>
-                {role.charAt(0).toUpperCase() + role.slice(1)}
-              </div>
-            </div>
-            <button
-              onClick={handleLogout}
-              className="btn-secondary"
-              style={{
-                borderColor: "#3A3530",
-                color: "#9A9589",
-                fontSize: 11,
-                padding: "6px 12px",
-              }}
-            >
-              Sign Out
-            </button>
-            <div className="rivet" />
-            <div className="rivet" />
           </div>
         </div>
-        <div style={{ height: 2, background: "linear-gradient(90deg, transparent 0%, #E3B23C 30%, #E3B23C 70%, transparent 100%)" }} />
+        <div className="flex items-center gap-3 md:gap-4">
+          <div className="text-right">
+            <div className="text-sm font-medium" style={{ color: "#FFFFFF" }}>{user || "…"}</div>
+            <div className="text-xs" style={{ color: "var(--chrome-muted)" }}>{cap(role)}</div>
+          </div>
+          <span className="badge badge-yellow hidden sm:inline-flex">{cap(role)}</span>
+          <button onClick={handleLogout} className="btn-secondary" style={{ fontSize: 13, padding: "7px 14px" }}>
+            Sign out
+          </button>
+        </div>
       </header>
 
       <div className="flex flex-1" style={{ minHeight: 0 }}>
 
-        {/* ── Left sidebar ─────────────────────────────────────────── */}
+        {/* ── Sidebar (desktop) ── */}
         <aside
+          className="chrome hidden md:flex"
           style={{
-            width: 210,
-            minWidth: 210,
-            background: "#1A1710",
-            borderRight: "1px solid #2E2B26",
-            display: "flex",
+            width: 232,
+            minWidth: 232,
+            borderRight: "1px solid var(--chrome-border)",
             flexDirection: "column",
+            padding: "16px 12px",
           }}
         >
-          {/* Panel label */}
-          <div
-            className="px-4 py-3 font-stencil text-xs"
-            style={{
-              color: "#4A4640",
-              borderBottom: "1px solid #2E2B26",
-              letterSpacing: "0.1em",
-            }}
-          >
-            Navigation
-          </div>
-
-          {/* Nav items */}
-          <nav className="flex-1 p-3 space-y-1">
-            {NAV_ITEMS.map((item) => {
-              const isActive =
-                pathname === item.path ||
-                pathname.startsWith(item.path + "/");
-              return (
-                <Link key={item.path} href={item.path} style={{ textDecoration: "none" }}>
-                  <div className={`nav-item ${isActive ? "active" : ""}`}>
-                    {/* Status dot */}
-                    <div
-                      className={`led ${isActive ? "led-yellow" : "led-grey"}`}
-                      style={{ width: 8, height: 8 }}
-                    />
-                    <div>
-                      <div
-                        className="font-mono"
-                        style={{
-                          fontSize: 10,
-                          color: isActive ? "#E3B23C" : "#4A4640",
-                          lineHeight: 1,
-                          marginBottom: 2,
-                        }}
-                      >
-                        {item.code}
-                      </div>
-                      <div
-                        className="font-sans text-sm font-medium"
-                        style={{ color: isActive ? "#F3ECDA" : "#9A9589" }}
-                      >
-                        {item.label}
-                      </div>
-                    </div>
-                  </div>
-                </Link>
-              );
-            })}
-          </nav>
-
-          {/* Footer */}
-          <div
-            className="px-4 py-3 flex items-center gap-2"
-            style={{ borderTop: "1px solid #2E2B26" }}
-          >
-            <div className="led led-green" style={{ width: 7, height: 7 }} />
-            <span className="font-mono" style={{ color: "#3A3530", fontSize: 10 }}>
-              PWR — ON
-            </span>
+          {nav}
+          <div className="text-xs px-3 pt-3" style={{ color: "var(--chrome-muted)", borderTop: "1px solid var(--chrome-border)" }}>
+            PRTCMS v2.4
           </div>
         </aside>
 
-        {/* ── Main content ──────────────────────────────────────────── */}
-        <main
-          className="flex-1 overflow-auto"
-          style={{ padding: "28px 32px" }}
-        >
-          {children}
+        {/* ── Drawer (mobile/tablet) ── */}
+        {drawerOpen && (
+          <div className="fixed inset-0 z-50 md:hidden" role="dialog" aria-label="Navigation">
+            <div
+              className="absolute inset-0"
+              style={{ background: "rgba(17, 24, 39, 0.45)" }}
+              onClick={() => setDrawerOpen(false)}
+            />
+            <aside
+              className="chrome absolute left-0 top-0 bottom-0 flex flex-col"
+              style={{ width: 248, padding: "16px 12px", boxShadow: "0 8px 32px rgba(17,24,39,0.2)" }}
+            >
+              <div className="flex items-center justify-between px-2 mb-3">
+                <span className="text-sm font-bold" style={{ color: "#FFFFFF" }}>Menu</span>
+                <button className="btn-ghost" onClick={() => setDrawerOpen(false)} aria-label="Close navigation" style={{ fontSize: 18, color: "#E5E5E5" }}>×</button>
+              </div>
+              {nav}
+            </aside>
+          </div>
+        )}
+
+        {/* ── Main content ── */}
+        <main className="flex-1 overflow-auto" style={{ padding: "24px clamp(16px, 4vw, 32px)" }}>
+          <div style={{ maxWidth: 1200 }}>{children}</div>
         </main>
       </div>
     </div>

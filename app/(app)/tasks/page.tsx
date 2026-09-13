@@ -1,52 +1,49 @@
 "use client";
-import { useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
-
-const MOCK_TASKS = [
-  { id: "TSK-2024-0847", area: "Unit-3 Reformer",      dept: "Maintenance",  type: "Hot Work Permit",        submitted: "2024-12-09", validityEnd: "2024-12-16", status: "pending",   assignee: "Ahmed Al-Rashidi",      role: "Requester" },
-  { id: "TSK-2024-0851", area: "Crude Distillation",    dept: "Operations",   type: "Confined Space Entry",   submitted: "2024-12-10", validityEnd: "2024-12-17", status: "ongoing",   assignee: "Samir Okafor",           role: "Receiver"  },
-  { id: "TSK-2024-0839", area: "Hydrogen Plant",         dept: "Safety",       type: "Cold Work Permit",       submitted: "2024-12-08", validityEnd: "2024-12-15", status: "submitted", assignee: "Fatima Al-Zahrawi",      role: "Requester" },
-  { id: "TSK-2024-0862", area: "Storage Tank Farm",      dept: "Inspection",   type: "Height Work Permit",     submitted: "2024-12-11", validityEnd: "2024-12-18", status: "approved",  assignee: "Col. James Harrington",  role: "Approver"  },
-  { id: "TSK-2024-0855", area: "Flare Stack",            dept: "HSE",          type: "Hot Work Permit",        submitted: "2024-12-10", validityEnd: "2024-12-17", status: "ongoing",   assignee: "Nadia Petrov",           role: "Receiver"  },
-  { id: "TSK-2024-0831", area: "LPG Sphere Farm",        dept: "Maintenance",  type: "Excavation Permit",      submitted: "2024-12-07", validityEnd: "2024-12-14", status: "expired",   assignee: "Omar Khalid",            role: "Requester" },
-  { id: "TSK-2024-0868", area: "Amine Treating Unit",    dept: "Operations",   type: "Electrical Isolation",   submitted: "2024-12-12", validityEnd: "2024-12-13", status: "submitted", assignee: "Ahmed Al-Rashidi",       role: "Requester" },
-  { id: "TSK-2024-0871", area: "Naphtha Hydrotreater",   dept: "Engineering",  type: "Hot Work Permit",        submitted: "2024-12-12", validityEnd: "2024-12-13", status: "returned",  assignee: "Eng. Layla Mansour",     role: "Approver"  },
-  { id: "TSK-2024-0875", area: "Cooling Tower",          dept: "Utilities",    type: "Cold Work Permit",       submitted: "2024-12-13", validityEnd: "2024-12-14", status: "approved",  assignee: "Samir Okafor",           role: "Receiver"  },
-  { id: "TSK-2024-0822", area: "Crude Pipeline",         dept: "Pipeline",     type: "Confined Space Entry",   submitted: "2024-12-06", validityEnd: "2024-12-07", status: "closed",    assignee: "Nadia Petrov",           role: "Receiver"  },
-  { id: "TSK-2024-0879", area: "Diesel Hydrotreater",    dept: "Maintenance",  type: "Hot Work Permit",        submitted: "2024-12-13", validityEnd: "2024-12-14", status: "pending",   assignee: "Fatima Al-Zahrawi",      role: "Requester" },
-  { id: "TSK-2024-0881", area: "Vacuum Distillation",    dept: "Operations",   type: "Height Work Permit",     submitted: "2024-12-13", validityEnd: "2024-12-14", status: "submitted", assignee: "Omar Khalid",            role: "Requester" },
-  { id: "TSK-2024-0884", area: "Sulfur Recovery",        dept: "Safety",       type: "Excavation Permit",      submitted: "2024-12-13", validityEnd: "2024-12-14", status: "rejected",  assignee: "Col. James Harrington",  role: "Approver"  },
-  { id: "TSK-2024-0887", area: "Isomerization Unit",     dept: "Engineering",  type: "Electrical Isolation",   submitted: "2024-12-13", validityEnd: "2024-12-14", status: "ongoing",   assignee: "Ahmed Al-Rashidi",       role: "Requester" },
-  { id: "TSK-2024-0890", area: "Product Loading Bay",    dept: "Logistics",    type: "Cold Work Permit",       submitted: "2024-12-13", validityEnd: "2024-12-14", status: "approved",  assignee: "Eng. Layla Mansour",     role: "Approver"  },
-];
-
-const STATUS_LED: Record<string, string> = {
-  approved: "led-green", ongoing:   "led-green",  submitted: "led-yellow",
-  pending:  "led-yellow", expired:  "led-red",    rejected:  "led-red",
-  returned: "led-amber",  closed:   "led-grey",   cancelled: "led-grey",
-};
-
-const STATUS_LABEL: Record<string, string> = {
-  approved: "Approved", ongoing: "Ongoing", submitted: "Submitted",
-  pending: "Pending", expired: "Expired", rejected: "Rejected",
-  returned: "Returned", closed: "Closed", cancelled: "Cancelled",
-};
-
-const DEPTS    = [...new Set(MOCK_TASKS.map((t) => t.dept))];
-const TYPES    = [...new Set(MOCK_TASKS.map((t) => t.type))];
-const STATUSES = [...new Set(MOCK_TASKS.map((t) => t.status))];
+import StatusBadge from "../../components/StatusBadge";
+import NewTaskModal from "../../components/NewTaskModal";
+import { can, pendingForRole, TOMORROW, useApp } from "../../store/AppStore";
 
 type View = "all" | "pending" | "tomorrow";
 
+function SkeletonRows({ cols }: { cols: number }) {
+  return (
+    <>
+      {[0, 1, 2, 3, 4].map((r) => (
+        <tr key={r}>
+          {Array.from({ length: cols }).map((_, c) => (
+            <td key={c}>
+              <div className="rounded" style={{ height: 14, background: "var(--border-soft)" }} />
+            </td>
+          ))}
+        </tr>
+      ))}
+    </>
+  );
+}
+
 export default function TasksPage() {
+  const { tasks, role, cloneTask, pushToast } = useApp();
   const [search,       setSearch]       = useState("");
   const [filterDept,   setFilterDept]   = useState("all");
   const [filterType,   setFilterType]   = useState("all");
   const [filterStatus, setFilterStatus] = useState("all");
   const [view,         setView]         = useState<View>("all");
   const [sortAlpha,    setSortAlpha]    = useState(false);
+  const [showNew,      setShowNew]      = useState(false);
+  const [loading,      setLoading]      = useState(true);
 
-  let tasks = MOCK_TASKS.filter((t) => {
+  useEffect(() => {
+    const t = setTimeout(() => setLoading(false), 350);
+    return () => clearTimeout(t);
+  }, []);
+
+  const DEPTS    = useMemo(() => [...new Set(tasks.map((t) => t.dept))], [tasks]);
+  const TYPES    = useMemo(() => [...new Set(tasks.map((t) => t.type))], [tasks]);
+  const STATUSES = useMemo(() => [...new Set(tasks.map((t) => t.status))], [tasks]);
+
+  let filtered = tasks.filter((t) => {
     const q = search.toLowerCase();
     return (
       (!q || t.id.toLowerCase().includes(q) || t.area.toLowerCase().includes(q) || t.assignee.toLowerCase().includes(q)) &&
@@ -56,50 +53,65 @@ export default function TasksPage() {
     );
   });
 
-  if (view === "pending") tasks = tasks.filter((t) => t.status === "pending" || t.status === "submitted");
+  if (view === "pending") {
+    const pendingIds = new Set(pendingForRole(tasks, role).map((t) => t.id));
+    filtered = filtered.filter((t) => pendingIds.has(t.id));
+  }
   if (view === "tomorrow") {
-    tasks = tasks.filter((t) => t.validityEnd === "2024-12-14");
-    tasks = [...tasks].sort((a, b) =>
-      sortAlpha
-        ? a.area.localeCompare(b.area)
-        : a.validityEnd.localeCompare(b.validityEnd)
-    );
+    // Due tomorrow or already overdue, most urgent first
+    filtered = filtered
+      .filter((t) => t.validityEnd <= TOMORROW && !["closed", "cancelled"].includes(t.status))
+      .sort((a, b) => {
+        if (sortAlpha) return a.area.localeCompare(b.area);
+        const urg = (s: string) => (["expired", "rejected"].includes(s) ? 0 : 1);
+        return urg(a.status) - urg(b.status) || a.validityEnd.localeCompare(b.validityEnd);
+      });
   }
 
   const VIEWS: { key: View; label: string }[] = [
-    { key: "all",      label: "All Tasks"         },
-    { key: "pending",  label: "My Pending Actions" },
-    { key: "tomorrow", label: "Planning Tomorrow"  },
+    { key: "all",      label: "All tasks" },
+    { key: "pending",  label: "My pending actions" },
+    { key: "tomorrow", label: "Planning tomorrow" },
   ];
+
+  const handleClone = (id: string) => {
+    const task = cloneTask(id);
+    if (task) pushToast(`Task cloned as ${task.id}`);
+  };
+
+  const canCreate = can(role, "create");
+  const canClone = can(role, "clone");
 
   return (
     <div className="space-y-5">
+      {showNew && <NewTaskModal onClose={() => setShowNew(false)} />}
 
       {/* Header */}
-      <div className="flex items-start justify-between">
+      <div className="flex items-start justify-between gap-4 flex-wrap">
         <div>
-          <h1 className="font-stencil text-2xl font-bold" style={{ color: "#1E1B16" }}>
-            Tasks &amp; Job Register
-          </h1>
-          <p className="font-mono text-xs mt-1" style={{ color: "#9A9589" }}>
-            Permit-to-Work management — {tasks.length} record{tasks.length !== 1 ? "s" : ""} shown
+          <h1 className="page-title">Tasks &amp; job register</h1>
+          <p className="page-subtitle">
+            Permit-to-work management — {filtered.length} record{filtered.length !== 1 ? "s" : ""} shown
           </p>
         </div>
-        <button className="btn-primary text-sm">+ New Task</button>
+        <button
+          className="btn-primary"
+          onClick={() => setShowNew(true)}
+          disabled={!canCreate}
+          title={canCreate ? "Create a new task" : `Your role (${role}) cannot create tasks`}
+        >
+          + New task
+        </button>
       </div>
 
       {/* View tabs */}
-      <div className="flex gap-1.5">
+      <div className="flex items-center flex-wrap" style={{ borderBottom: "1px solid var(--border)" }}>
         {VIEWS.map(({ key, label }) => (
           <button
             key={key}
             onClick={() => setView(key)}
-            className="font-stencil text-xs px-4 py-2 rounded-sm border transition-all"
-            style={{
-              background:   view === key ? "#1E1B16"   : "#FAF7F0",
-              color:        view === key ? "#E3B23C"   : "#6E6A5E",
-              borderColor:  view === key ? "#3A3530"   : "#D4CCB8",
-            }}
+            className={`tab-btn ${view === key ? "active" : ""}`}
+            aria-pressed={view === key}
           >
             {label}
           </button>
@@ -107,14 +119,11 @@ export default function TasksPage() {
         {view === "tomorrow" && (
           <button
             onClick={() => setSortAlpha((a) => !a)}
-            className="ml-auto font-stencil text-xs px-3 py-2 rounded-sm border"
-            style={{
-              borderColor: sortAlpha ? "#E3B23C" : "#D4CCB8",
-              color:       sortAlpha ? "#C49020" : "#9A9589",
-              background:  "#FAF7F0",
-            }}
+            aria-pressed={sortAlpha}
+            className="btn-secondary ml-auto"
+            style={{ fontSize: 13, padding: "6px 12px", marginBottom: 8 }}
           >
-            A–Z {sortAlpha ? "▼" : "○"}
+            Sort A–Z {sortAlpha ? "on" : "off"}
           </button>
         )}
       </div>
@@ -125,101 +134,108 @@ export default function TasksPage() {
           value={search}
           onChange={(e) => setSearch(e.target.value)}
           placeholder="Search ID, area, operator…"
-          className="ctrl-input flex-1 min-w-48"
+          className="ctrl-input flex-1"
+          style={{ minWidth: 200 }}
+          aria-label="Search tasks"
         />
-        <select value={filterDept}   onChange={(e) => setFilterDept(e.target.value)}   className="ctrl-select">
-          <option value="all">All Departments</option>
+        <select value={filterDept} onChange={(e) => setFilterDept(e.target.value)} className="ctrl-select" aria-label="Filter by department">
+          <option value="all">All departments</option>
           {DEPTS.map((d) => <option key={d} value={d}>{d}</option>)}
         </select>
-        <select value={filterType}   onChange={(e) => setFilterType(e.target.value)}   className="ctrl-select">
-          <option value="all">All Types</option>
+        <select value={filterType} onChange={(e) => setFilterType(e.target.value)} className="ctrl-select" aria-label="Filter by type">
+          <option value="all">All types</option>
           {TYPES.map((t) => <option key={t} value={t}>{t}</option>)}
         </select>
-        <select value={filterStatus} onChange={(e) => setFilterStatus(e.target.value)} className="ctrl-select">
-          <option value="all">All Statuses</option>
-          {STATUSES.map((s) => <option key={s} value={s}>{STATUS_LABEL[s]}</option>)}
+        <select value={filterStatus} onChange={(e) => setFilterStatus(e.target.value)} className="ctrl-select" aria-label="Filter by status">
+          <option value="all">All statuses</option>
+          {STATUSES.map((s) => <option key={s} value={s}>{s.charAt(0).toUpperCase() + s.slice(1)}</option>)}
         </select>
       </div>
 
       {/* Table */}
-      <div className="table-wrap blueprint-bg">
-        <table>
+      <div className="table-wrap" style={{ overflowX: "auto" }}>
+        <table style={{ minWidth: 960 }}>
           <thead>
             <tr>
-              <th style={{ width: 44 }}>#</th>
+              <th style={{ width: 48 }}>#</th>
               <th>Task ID</th>
               <th>Area / Unit</th>
               <th>Department</th>
-              <th>Permit Type</th>
+              <th>Permit type</th>
               <th>Submitted</th>
-              <th>Valid Until</th>
+              <th>Valid until</th>
               <th>Status</th>
-              <th>Assigned To</th>
+              <th>Assigned to</th>
               <th>Actions</th>
             </tr>
           </thead>
           <tbody>
-            {tasks.length === 0 ? (
+            {loading ? (
+              <SkeletonRows cols={10} />
+            ) : filtered.length === 0 ? (
               <tr>
-                <td colSpan={10} style={{ textAlign: "center", padding: "40px", color: "#9A9589" }}>
-                  <div className="font-stencil text-sm">No records match current filters</div>
+                <td colSpan={10} style={{ textAlign: "center", padding: "48px 16px" }}>
+                  <div className="text-sm font-semibold" style={{ color: "var(--text)" }}>No tasks match your filters</div>
+                  <div className="text-xs mt-1" style={{ color: "#6B7280" }}>Try clearing the search or choosing different filters.</div>
                 </td>
               </tr>
             ) : (
-              tasks.map((task, idx) => (
+              filtered.map((task, idx) => (
                 <tr key={task.id}>
-                  <td style={{ padding: "10px 14px" }}>
-                    <span className="font-mono text-xs" style={{ color: "#B4ACAA" }}>
+                  <td>
+                    <span className="text-xs" style={{ color: "#9CA3AF" }}>
                       {String(idx + 1).padStart(3, "0")}
                     </span>
                   </td>
-                  <td style={{ padding: "10px 14px" }}>
-                    <Link href={`/tasks/${task.id}`}>
-                      <span className="font-mono text-xs font-bold" style={{ color: "#1E1B16", textDecoration: "underline", textDecorationColor: "#D4CCB8" }}>
-                        {task.id}
-                      </span>
+                  <td>
+                    <Link href={`/tasks/${task.id}`} className="link-action">
+                      {task.id}
                     </Link>
                   </td>
-                  <td style={{ padding: "10px 14px" }}>
-                    <span className="font-sans text-sm" style={{ color: "#1E1B16" }}>{task.area}</span>
+                  <td>
+                    <span className="text-sm" style={{ color: "var(--text)" }}>{task.area}</span>
                   </td>
-                  <td style={{ padding: "10px 14px" }}>
-                    <span className="font-sans text-xs" style={{ color: "#6E6A5E" }}>{task.dept}</span>
+                  <td>
+                    <span className="text-xs" style={{ color: "#6B7280" }}>{task.dept}</span>
                   </td>
-                  <td style={{ padding: "10px 14px" }}>
-                    <span className="font-mono text-xs" style={{ color: "#1E1B16" }}>{task.type}</span>
+                  <td>
+                    <span className="text-xs" style={{ color: "var(--text)" }}>{task.type}</span>
                   </td>
-                  <td style={{ padding: "10px 14px" }}>
-                    <span className="font-mono text-xs" style={{ color: "#6E6A5E" }}>{task.submitted}</span>
+                  <td>
+                    <span className="text-xs" style={{ color: "#6B7280" }}>{task.submitted}</span>
                   </td>
-                  <td style={{ padding: "10px 14px" }}>
+                  <td>
                     <span
-                      className="font-mono text-xs"
-                      style={{ color: task.validityEnd <= "2024-12-14" ? "#C1402A" : "#1E1B16", fontWeight: task.validityEnd <= "2024-12-14" ? 600 : 400 }}
+                      className="text-xs"
+                      style={{
+                        color: task.validityEnd <= TOMORROW ? "#D64545" : "var(--text)",
+                        fontWeight: task.validityEnd <= TOMORROW ? 600 : 400,
+                      }}
                     >
                       {task.validityEnd}
                     </span>
                   </td>
-                  <td style={{ padding: "10px 14px" }}>
-                    <div className="flex items-center gap-2">
-                      <div className={`led ${STATUS_LED[task.status]}`} />
-                      <span className="font-sans text-xs" style={{ color: "#6E6A5E" }}>
-                        {STATUS_LABEL[task.status]}
-                      </span>
-                    </div>
+                  <td>
+                    <StatusBadge status={task.status} />
                   </td>
-                  <td style={{ padding: "10px 14px" }}>
-                    <div className="font-sans text-xs" style={{ color: "#1E1B16" }}>{task.assignee}</div>
-                    <div className="font-mono text-xs" style={{ color: "#9A9589" }}>{task.role}</div>
+                  <td>
+                    <div className="text-xs" style={{ color: "var(--text)" }}>{task.assignee}</div>
+                    <div className="text-xs" style={{ color: "#9CA3AF" }}>{task.assigneeRole}</div>
                   </td>
-                  <td style={{ padding: "10px 14px" }}>
-                    <div className="flex gap-1.5">
+                  <td>
+                    <div className="flex gap-1">
                       <Link href={`/tasks/${task.id}`}>
-                        <button className="btn-ghost" style={{ fontSize: 10, padding: "4px 8px" }}>View</button>
+                        <button className="btn-ghost">View</button>
                       </Link>
-                      <button className="btn-ghost" style={{ fontSize: 10, padding: "4px 8px", color: "#C49020", borderColor: "#D4CCB8" }}>
-                        Clone
-                      </button>
+                      {canClone && (
+                        <button
+                          className="btn-outline"
+                          style={{ fontSize: 12, padding: "5px 10px" }}
+                          onClick={() => handleClone(task.id)}
+                        >
+                          Clone
+                        </button>
+                      )}
                     </div>
                   </td>
                 </tr>

@@ -1,3 +1,6 @@
+"use client";
+import { useApp } from "../../store/AppStore";
+
 const ROLES = ["Requester", "Receiver", "Approver", "Admin"];
 
 const ACTIONS = [
@@ -32,44 +35,40 @@ const ROLE_DESC: Record<string, string> = {
 };
 
 export default function RolesPage() {
+  const { role: activeRole } = useApp();
   return (
-    <div className="space-y-6 max-w-5xl">
+    <div className="space-y-6" style={{ maxWidth: 1024 }}>
 
       {/* Header */}
       <div>
-        <h1 className="font-stencil text-2xl font-bold" style={{ color: "#1E1B16" }}>
-          Roles &amp; Permissions Matrix
-        </h1>
-        <p className="font-mono text-xs mt-1" style={{ color: "#9A9589" }}>
+        <h1 className="page-title">Roles &amp; permissions matrix</h1>
+        <p className="page-subtitle">
           Access control — system authorisation matrix — 4 roles × 12 permissions
         </p>
       </div>
 
       {/* Role summary cards */}
-      <div className="grid grid-cols-4 gap-3">
+      <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
         {ROLES.map((role) => {
-          const count   = PERMISSIONS[role].length;
-          const isAdmin = role === "Admin";
+          const count = PERMISSIONS[role].length;
+          const pct   = Math.round((count / ACTIONS.length) * 100);
+          const isCurrent = role.toLowerCase() === activeRole;
           return (
-            <div key={role} className="eng-panel rounded-sm p-4">
-              <div className="flex items-center gap-2 mb-2">
-                <div className={`led ${isAdmin ? "led-yellow" : "led-green"}`} />
-                <div className="font-stencil text-sm font-semibold" style={{ color: "#1E1B16" }}>{role}</div>
+            <div
+              key={role}
+              className="card p-5"
+              style={isCurrent ? { borderColor: "#E8B923", borderWidth: 2 } : undefined}
+            >
+              <div className="flex items-center gap-2 flex-wrap">
+                <div className="text-sm font-semibold" style={{ color: "var(--text)" }}>{role}</div>
+                {isCurrent && <span className="badge badge-yellow">Current role</span>}
               </div>
-              <p className="font-sans text-xs leading-snug mb-3" style={{ color: "#6E6A5E" }}>{ROLE_DESC[role]}</p>
-              <div className="font-mono text-xs" style={{ color: "#9A9589" }}>
+              <p className="text-xs leading-snug mt-1 mb-3" style={{ color: "#6B7280" }}>{ROLE_DESC[role]}</p>
+              <div className="text-xs font-medium" style={{ color: "var(--text)" }}>
                 {count} of {ACTIONS.length} permissions
               </div>
-              {/* Mini permission dots */}
-              <div className="flex flex-wrap gap-1 mt-2">
-                {ACTIONS.map((a) => (
-                  <div
-                    key={a.id}
-                    className={`led ${PERMISSIONS[role].includes(a.id) ? "led-green" : "led-grey"}`}
-                    style={{ width: 7, height: 7 }}
-                    title={a.label}
-                  />
-                ))}
+              <div className="mt-2 rounded-full" style={{ height: 6, background: "var(--border-soft)" }}>
+                <div className="rounded-full" style={{ height: 6, width: `${pct}%`, background: "#E8B923" }} />
               </div>
             </div>
           );
@@ -78,18 +77,13 @@ export default function RolesPage() {
 
       {/* Permissions matrix table */}
       <div>
-        <div
-          className="font-stencil text-xs mb-3"
-          style={{ color: "#9A9589", borderBottom: "1px solid #D4CCB8", paddingBottom: 6, letterSpacing: "0.1em" }}
-        >
-          Detailed Permission Matrix
-        </div>
+        <div className="section-label mb-3">Detailed permission matrix</div>
 
-        <div className="table-wrap blueprint-bg">
-          <table>
+        <div className="table-wrap" style={{ overflowX: "auto" }}>
+          <table style={{ minWidth: 720 }}>
             <thead>
               <tr>
-                <th style={{ minWidth: 200 }}>Action</th>
+                <th style={{ minWidth: 220 }}>Action</th>
                 <th style={{ textAlign: "center" }}>Category</th>
                 {ROLES.map((r) => (
                   <th key={r} style={{ textAlign: "center" }}>{r}</th>
@@ -97,61 +91,49 @@ export default function RolesPage() {
               </tr>
             </thead>
             <tbody>
-              {CATEGORIES.map((cat) => {
-                const catActions = ACTIONS.filter((a) => a.category === cat);
-                return catActions.map((action, i) => (
-                  <tr key={action.id} style={{ borderTop: i === 0 ? "2px solid #D4CCB8" : undefined }}>
-                    <td style={{ padding: "10px 14px" }}>
-                      <div className="font-stencil text-xs" style={{ color: "#1E1B16", fontSize: 11 }}>{action.label}</div>
-                      <div className="font-sans text-xs" style={{ color: "#9A9589", fontSize: 10 }}>{action.desc}</div>
+              {CATEGORIES.map((cat) => (
+                catActions(cat).map((action) => (
+                  <tr key={action.id}>
+                    <td>
+                      <div className="text-sm font-medium" style={{ color: "var(--text)" }}>{action.label}</div>
+                      <div className="text-xs" style={{ color: "#6B7280" }}>{action.desc}</div>
                     </td>
-                    <td style={{ padding: "10px 14px", textAlign: "center" }}>
-                      <span
-                        className="font-stencil text-xs px-2 py-0.5 rounded-sm"
-                        style={{ background: "#EDE5CE", color: "#6E6A5E", fontSize: 9 }}
-                      >
-                        {action.category}
-                      </span>
+                    <td style={{ textAlign: "center" }}>
+                      <span className="badge badge-grey">{action.category}</span>
                     </td>
                     {ROLES.map((role) => {
                       const allowed = PERMISSIONS[role].includes(action.id);
                       return (
-                        <td key={role} style={{ padding: "10px 14px", textAlign: "center" }}>
-                          <div className="flex items-center justify-center gap-1.5">
-                            <div className={`led ${allowed ? "led-green" : "led-grey"}`} />
-                            <span
-                              className="font-mono text-xs"
-                              style={{ color: allowed ? "#2E8018" : "#C4BAA0", fontSize: 9 }}
-                            >
-                              {allowed ? "Yes" : "No"}
-                            </span>
-                          </div>
+                        <td key={role} style={{ textAlign: "center" }}>
+                          <span
+                            className="text-xs font-medium"
+                            style={{ color: allowed ? "var(--text)" : "#D1D5DB" }}
+                          >
+                            {allowed ? "Yes" : "No"}
+                          </span>
                         </td>
                       );
                     })}
                   </tr>
-                ));
-              })}
+                ))
+              ))}
             </tbody>
           </table>
         </div>
       </div>
 
       {/* Legend */}
-      <div className="flex items-center gap-8 pt-1">
-        {[
-          { cls: "led-green", label: "Permitted" },
-          { cls: "led-grey",  label: "Not permitted" },
-        ].map(({ cls, label }) => (
-          <div key={label} className="flex items-center gap-2">
-            <div className={`led ${cls}`} />
-            <span className="font-sans text-xs" style={{ color: "#6E6A5E" }}>{label}</span>
-          </div>
-        ))}
-        <span className="font-mono text-xs" style={{ color: "#B4ACAA" }}>
+      <div className="flex items-center gap-6 pt-1">
+        <span className="text-xs font-medium" style={{ color: "var(--text)" }}>Yes — permitted</span>
+        <span className="text-xs" style={{ color: "#9CA3AF" }}>No — not permitted</span>
+        <span className="text-xs" style={{ color: "#9CA3AF" }}>
           Admin has all permissions by default
         </span>
       </div>
     </div>
   );
+}
+
+function catActions(cat: string) {
+  return ACTIONS.filter((a) => a.category === cat);
 }

@@ -12,7 +12,7 @@ logs/
 *.log
 .claude-replay.*
 .tmp-*
-/.figma/design-context/
+
 
 # Platform-managed agentplat state, not project source. In the
 # client-initiated single-repo workspace layout (make's `Path: "."` spec) the
@@ -20,3 +20,15 @@ logs/
 # beside it.
 /.plugins/
 /.opencode-skills/
+/.agnets
+/.augment
+/.aider-desk
+/.autohand
+/.bob
+/.claude
+/.codeartsdoer
+/.codebuddy
+/.codemaker
+/.codestudio
+/.openhands
+/.windsurf

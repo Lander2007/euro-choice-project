@@ -1,5 +1,8 @@
 "use client";
-import { useState } from "react";
+import { useEffect, useState } from "react";
+import Link from "next/link";
+import StatusBadge from "../../components/StatusBadge";
+import { can, cap, useApp, type Cert } from "../../store/AppStore";
 
 const CERT_TYPES = [
   "Gas Test Certificate",
@@ -8,82 +11,61 @@ const CERT_TYPES = [
   "Electrical Isolation Certificate",
 ];
 
-const MOCK_CERTS = [
-  { id: "GTC-2024-4421", type: "Gas Test Certificate",            area: "Unit-3 Reformer",     issuer: "Hassan Al-Mutairi",  issued: "2024-12-09", expiry: "2024-12-10", status: "expired",   taskRef: "TSK-2024-0847", verified: false },
-  { id: "GTC-2024-4430", type: "Gas Test Certificate",            area: "Crude Distillation",  issuer: "Rania Jaber",         issued: "2024-12-12", expiry: "2024-12-13", status: "approved",  taskRef: "TSK-2024-0875", verified: true  },
-  { id: "FWA-2024-1183", type: "Fire Watch Authorization",         area: "Unit-3 Reformer",     issuer: "Fire & Safety Dept",  issued: "2024-12-09", expiry: "2024-12-16", status: "ongoing",   taskRef: "TSK-2024-0847", verified: true  },
-  { id: "FWA-2024-1190", type: "Fire Watch Authorization",         area: "LPG Sphere Farm",     issuer: "Fire & Safety Dept",  issued: "2024-12-07", expiry: "2024-12-14", status: "pending",   taskRef: "TSK-2024-0831", verified: false },
-  { id: "MIC-2024-0872", type: "Mechanical Isolation Certificate", area: "Unit-3 Reformer",     issuer: "Samir Okafor",         issued: "2024-12-08", expiry: "2024-12-16", status: "approved",  taskRef: "TSK-2024-0847", verified: true  },
-  { id: "MIC-2024-0880", type: "Mechanical Isolation Certificate", area: "Naphtha Hydrotreater", issuer: "Nadia Petrov",        issued: "2024-12-12", expiry: "2024-12-14", status: "returned",  taskRef: "TSK-2024-0871", verified: false },
-  { id: "EIC-2024-0614", type: "Electrical Isolation Certificate", area: "Amine Treating Unit", issuer: "Yusuf Al-Hamdan",     issued: "2024-12-12", expiry: "2024-12-13", status: "submitted", taskRef: "TSK-2024-0868", verified: false },
-  { id: "EIC-2024-0620", type: "Electrical Isolation Certificate", area: "Isomerization Unit",  issuer: "Yusuf Al-Hamdan",     issued: "2024-12-13", expiry: "2024-12-14", status: "approved",  taskRef: "TSK-2024-0887", verified: true  },
-  { id: "GTC-2024-4438", type: "Gas Test Certificate",            area: "Flare Stack",          issuer: "Hassan Al-Mutairi",  issued: "2024-12-10", expiry: "2024-12-17", status: "ongoing",   taskRef: "TSK-2024-0855", verified: true  },
-  { id: "FWA-2024-1195", type: "Fire Watch Authorization",         area: "Diesel Hydrotreater", issuer: "Fire & Safety Dept",  issued: "2024-12-13", expiry: "2024-12-14", status: "pending",   taskRef: "TSK-2024-0879", verified: false },
-];
-
-const STATUS_LED: Record<string, string> = {
-  approved: "led-green", ongoing: "led-green", submitted: "led-yellow",
-  pending:  "led-yellow", expired: "led-red",   rejected:  "led-red",
-  returned: "led-amber",  closed:  "led-grey",
-};
-
-const STATUS_LABEL: Record<string, string> = {
-  approved: "Approved", ongoing: "Ongoing", submitted: "Submitted",
-  pending: "Pending", expired: "Expired", rejected: "Rejected",
-  returned: "Returned", closed: "Closed",
-};
-
-type Cert = typeof MOCK_CERTS[0];
-
-function VerifyModal({ cert, onClose, onVerify }: { cert: Cert; onClose: () => void; onVerify: (id: string) => void }) {
+function VerifyModal({ cert, onClose }: { cert: Cert; onClose: () => void }) {
+  const { verifyCert, pushToast } = useApp();
   return (
     <div
       className="fixed inset-0 flex items-center justify-center z-50"
-      style={{ background: "rgba(30,27,22,0.65)", backdropFilter: "blur(2px)" }}
+      style={{ background: "rgba(17, 24, 39, 0.45)" }}
+      onClick={onClose}
+      role="dialog"
+      aria-modal="true"
+      aria-label="Manual verification"
     >
-      <div className="eng-panel rounded-sm p-6 w-full max-w-md mx-4" style={{ boxShadow: "0 8px 40px rgba(30,27,22,0.3)" }}>
+      <div
+        className="w-full mx-4 p-6"
+        style={{ maxWidth: 480, background: "var(--surface)", borderRadius: 8, boxShadow: "0 12px 40px rgba(17,24,39,0.18)" }}
+        onClick={(e) => e.stopPropagation()}
+      >
         <div className="flex items-center justify-between mb-5">
-          <div className="font-stencil text-base font-bold" style={{ color: "#1E1B16" }}>
-            Manual Verification
+          <div className="text-base font-semibold" style={{ color: "var(--text)" }}>
+            Manual verification
           </div>
-          <button onClick={onClose} className="btn-ghost" style={{ fontSize: 16, lineHeight: 1 }}>×</button>
+          <button onClick={onClose} className="btn-ghost" style={{ fontSize: 18, lineHeight: 1 }} aria-label="Close">×</button>
         </div>
 
-        <div
-          className="rounded-sm p-4 mb-5"
-          style={{ background: "#EDE5CE", border: "1px solid #D4CCB8" }}
-        >
-          <div className="space-y-2.5">
+        <div className="rounded-md p-4 mb-4" style={{ background: "var(--bg)", border: "1px solid var(--border)" }}>
+          <div className="space-y-2">
             {[
-              ["Certificate No.", cert.id],
+              ["Certificate no.", cert.id],
               ["Type",            cert.type],
               ["Area / Unit",     cert.area],
-              ["Issuing Authority", cert.issuer],
-              ["Date Issued",     cert.issued],
-              ["Expiry Date",     cert.expiry],
-              ["Linked Task",     cert.taskRef],
-              ["Current Status",  STATUS_LABEL[cert.status] || cert.status],
+              ["Issuing authority", cert.issuer],
+              ["Date issued",     cert.issued],
+              ["Expiry date",     cert.expiry],
+              ["Linked task",     cert.taskRef],
+              ["Current status",  cap(cert.status)],
             ].map(([label, value]) => (
               <div key={label} className="flex gap-3">
-                <div className="font-stencil text-xs flex-shrink-0" style={{ color: "#9A9589", width: 130, fontSize: 10 }}>{label}</div>
-                <div className="font-mono text-xs" style={{ color: "#1E1B16" }}>{value}</div>
+                <div className="text-xs flex-shrink-0 font-medium" style={{ color: "#6B7280", width: 130 }}>{label}</div>
+                <div className="text-xs" style={{ color: "var(--text)" }}>{value}</div>
               </div>
             ))}
           </div>
         </div>
 
-        <p className="font-sans text-xs leading-relaxed mb-5" style={{ color: "#9A9589" }}>
-          By marking this certificate as verified, you confirm that you have reviewed the physical documentation and all data fields are correct. This action is recorded in the audit log.
+        <p className="text-xs leading-relaxed mb-5" style={{ color: "#6B7280" }}>
+          By marking this certificate as verified, you confirm that you have reviewed the physical documentation and all data fields are correct. This action is recorded in the audit log and reflected on the linked task ({cert.taskRef}).
         </p>
 
-        <div className="flex gap-3">
+        <div className="flex gap-2">
           <button
-            onClick={() => { onVerify(cert.id); onClose(); }}
+            onClick={() => { verifyCert(cert.id); pushToast(`${cert.id} marked as verified`); onClose(); }}
             className="btn-primary flex-1"
           >
-            Mark as Verified
+            Mark as verified
           </button>
-          <button onClick={onClose} className="btn-secondary px-5">Cancel</button>
+          <button onClick={onClose} className="btn-secondary">Cancel</button>
         </div>
       </div>
     </div>
@@ -91,53 +73,46 @@ function VerifyModal({ cert, onClose, onVerify }: { cert: Cert; onClose: () => v
 }
 
 export default function CertificatesPage() {
-  const [certs,       setCerts]       = useState(MOCK_CERTS);
+  const { certs, role } = useApp();
   const [filterType,  setFilterType]  = useState("all");
   const [selectedCert, setSelected]  = useState<Cert | null>(null);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    const t = setTimeout(() => setLoading(false), 350);
+    return () => clearTimeout(t);
+  }, []);
 
   const filtered = filterType === "all" ? certs : certs.filter((c) => c.type === filterType);
-
-  const handleVerify = (id: string) => {
-    setCerts((prev) => prev.map((c) => c.id === id ? { ...c, verified: true, status: "approved" } : c));
-  };
+  const canVerify = can(role, "verify_cert");
 
   return (
     <div className="space-y-5">
       {selectedCert && (
-        <VerifyModal cert={selectedCert} onClose={() => setSelected(null)} onVerify={handleVerify} />
+        <VerifyModal cert={selectedCert} onClose={() => setSelected(null)} />
       )}
 
-      {/* Header */}
-      <div className="flex items-start justify-between">
-        <div>
-          <h1 className="font-stencil text-2xl font-bold" style={{ color: "#1E1B16" }}>Certificate Registry</h1>
-          <p className="font-mono text-xs mt-1" style={{ color: "#9A9589" }}>
-            Permit documentation — {filtered.length} record{filtered.length !== 1 ? "s" : ""} shown
-          </p>
-        </div>
+      <div>
+        <h1 className="page-title">Certificate registry</h1>
+        <p className="page-subtitle">
+          Permit documentation — {filtered.length} record{filtered.length !== 1 ? "s" : ""} shown
+        </p>
       </div>
 
-      {/* Summary row */}
-      <div className="grid grid-cols-4 gap-3">
+      <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
         {CERT_TYPES.map((type) => {
           const count    = certs.filter((c) => c.type === type).length;
           const verified = certs.filter((c) => c.type === type && c.verified).length;
           const expired  = certs.filter((c) => c.type === type && c.status === "expired").length;
-          const shortName = type.replace(" Certificate", "").replace(" Authorization", "").replace(" Isolation Certificate", " Isolation");
+          const shortName = type.replace(" Certificate", "").replace(" Authorization", "");
           return (
-            <div key={type} className="eng-panel rounded-sm p-4">
-              <div className="font-stencil text-xs mb-2" style={{ color: "#9A9589", fontSize: 10 }}>{shortName}</div>
-              <div className="font-mono text-2xl font-bold" style={{ color: "#1E1B16" }}>{count}</div>
-              <div className="flex items-center gap-3 mt-2">
-                <div className="flex items-center gap-1">
-                  <div className="led led-green" style={{ width: 7, height: 7 }} />
-                  <span className="font-mono text-xs" style={{ color: "#9A9589", fontSize: 9 }}>{verified} verified</span>
-                </div>
+            <div key={type} className="card p-5">
+              <div className="font-bold" style={{ fontSize: 30, lineHeight: 1.2, color: "var(--text)" }}>{count}</div>
+              <div className="text-sm font-medium mt-1" style={{ color: "var(--text)" }}>{shortName}</div>
+              <div className="text-xs mt-1" style={{ color: "#6B7280" }}>
+                {verified} verified
                 {expired > 0 && (
-                  <div className="flex items-center gap-1">
-                    <div className="led led-red" style={{ width: 7, height: 7 }} />
-                    <span className="font-mono text-xs" style={{ color: "#C1402A", fontSize: 9 }}>{expired} expired</span>
-                  </div>
+                  <span style={{ color: "#D64545", fontWeight: 600 }}> · {expired} expired</span>
                 )}
               </div>
             </div>
@@ -145,100 +120,116 @@ export default function CertificatesPage() {
         })}
       </div>
 
-      {/* Type filter tabs */}
-      <div className="flex gap-1.5 flex-wrap">
+      <div className="flex gap-0 flex-wrap" style={{ borderBottom: "1px solid var(--border)" }}>
         <button
           onClick={() => setFilterType("all")}
-          className="font-stencil text-xs px-4 py-2 rounded-sm border transition-all"
-          style={{
-            background:  filterType === "all" ? "#1E1B16"  : "#FAF7F0",
-            color:       filterType === "all" ? "#E3B23C"  : "#6E6A5E",
-            borderColor: filterType === "all" ? "#3A3530"  : "#D4CCB8",
-          }}
+          className={`tab-btn ${filterType === "all" ? "active" : ""}`}
+          aria-pressed={filterType === "all"}
         >
-          All Types
+          All types
         </button>
         {CERT_TYPES.map((t) => (
           <button
             key={t}
             onClick={() => setFilterType(t)}
-            className="font-stencil text-xs px-4 py-2 rounded-sm border transition-all"
-            style={{
-              background:  filterType === t ? "#1E1B16"  : "#FAF7F0",
-              color:       filterType === t ? "#E3B23C"  : "#6E6A5E",
-              borderColor: filterType === t ? "#3A3530"  : "#D4CCB8",
-              fontSize: 11,
-            }}
+            className={`tab-btn ${filterType === t ? "active" : ""}`}
+            aria-pressed={filterType === t}
           >
             {t.split(" ").slice(0, 2).join(" ")}
           </button>
         ))}
       </div>
 
-      {/* Table */}
-      <div className="table-wrap blueprint-bg">
-        <table>
+      <div className="table-wrap" style={{ overflowX: "auto" }}>
+        <table style={{ minWidth: 980 }}>
           <thead>
             <tr>
-              <th>#</th><th>Certificate No.</th><th>Type</th><th>Area / Unit</th>
+              <th>#</th><th>Certificate no.</th><th>Type</th><th>Area / Unit</th>
               <th>Issuer</th><th>Issued</th><th>Expiry</th>
-              <th>Status</th><th>Task Ref.</th><th>Verified</th><th>Action</th>
+              <th>Status</th><th>Task ref.</th><th>Verified</th><th>Action</th>
             </tr>
           </thead>
           <tbody>
-            {filtered.map((cert, idx) => (
-              <tr key={cert.id}>
-                <td style={{ padding: "10px 14px" }}>
-                  <span className="font-mono text-xs" style={{ color: "#B4ACAA" }}>{String(idx + 1).padStart(3, "0")}</span>
-                </td>
-                <td style={{ padding: "10px 14px" }}>
-                  <span className="font-mono text-xs font-bold" style={{ color: "#1E1B16" }}>{cert.id}</span>
-                </td>
-                <td style={{ padding: "10px 14px" }}>
-                  <span className="font-sans text-xs" style={{ color: "#1E1B16" }}>{cert.type}</span>
-                </td>
-                <td style={{ padding: "10px 14px" }}>
-                  <span className="font-sans text-xs" style={{ color: "#6E6A5E" }}>{cert.area}</span>
-                </td>
-                <td style={{ padding: "10px 14px" }}>
-                  <span className="font-sans text-xs" style={{ color: "#6E6A5E" }}>{cert.issuer}</span>
-                </td>
-                <td style={{ padding: "10px 14px" }}>
-                  <span className="font-mono text-xs" style={{ color: "#6E6A5E" }}>{cert.issued}</span>
-                </td>
-                <td style={{ padding: "10px 14px" }}>
-                  <span className="font-mono text-xs" style={{ color: cert.expiry <= "2024-12-13" ? "#C1402A" : "#1E1B16", fontWeight: cert.expiry <= "2024-12-13" ? 600 : 400 }}>
-                    {cert.expiry}
-                  </span>
-                </td>
-                <td style={{ padding: "10px 14px" }}>
-                  <div className="flex items-center gap-2">
-                    <div className={`led ${STATUS_LED[cert.status]}`} />
-                    <span className="font-sans text-xs" style={{ color: "#6E6A5E" }}>{STATUS_LABEL[cert.status]}</span>
-                  </div>
-                </td>
-                <td style={{ padding: "10px 14px" }}>
-                  <span className="font-mono text-xs" style={{ color: "#9A9589" }}>{cert.taskRef}</span>
-                </td>
-                <td style={{ padding: "10px 14px" }}>
-                  <div className={`led ${cert.verified ? "led-green" : "led-grey"}`} />
-                </td>
-                <td style={{ padding: "10px 14px" }}>
-                  {!cert.verified && (
-                    <button
-                      onClick={() => setSelected(cert)}
-                      className="btn-ghost"
-                      style={{ fontSize: 10, padding: "4px 8px", color: "#C49020", borderColor: "#D4CCB8" }}
-                    >
-                      Verify
-                    </button>
-                  )}
+            {loading ? (
+              [0, 1, 2, 3, 4].map((r) => (
+                <tr key={r}>
+                  {Array.from({ length: 11 }).map((_, c) => (
+                    <td key={c}><div className="rounded" style={{ height: 14, background: "var(--border-soft)" }} /></td>
+                  ))}
+                </tr>
+              ))
+            ) : filtered.length === 0 ? (
+              <tr>
+                <td colSpan={11} style={{ textAlign: "center", padding: "48px 16px" }}>
+                  <div className="text-sm font-semibold" style={{ color: "var(--text)" }}>No certificates found</div>
+                  <div className="text-xs mt-1" style={{ color: "#6B7280" }}>Try a different certificate type.</div>
                 </td>
               </tr>
-            ))}
+            ) : (
+              filtered.map((cert, idx) => (
+                <tr key={cert.id}>
+                  <td>
+                    <span className="text-xs" style={{ color: "#9CA3AF" }}>{String(idx + 1).padStart(3, "0")}</span>
+                  </td>
+                  <td>
+                    <span className="text-xs font-semibold" style={{ color: "var(--text)" }}>{cert.id}</span>
+                  </td>
+                  <td>
+                    <span className="text-xs" style={{ color: "var(--text)" }}>{cert.type}</span>
+                  </td>
+                  <td>
+                    <span className="text-xs" style={{ color: "#6B7280" }}>{cert.area}</span>
+                  </td>
+                  <td>
+                    <span className="text-xs" style={{ color: "#6B7280" }}>{cert.issuer}</span>
+                  </td>
+                  <td>
+                    <span className="text-xs" style={{ color: "#6B7280" }}>{cert.issued}</span>
+                  </td>
+                  <td>
+                    <span
+                      className="text-xs"
+                      style={{
+                        color: cert.expiry <= "2024-12-13" ? "#D64545" : "var(--text)",
+                        fontWeight: cert.expiry <= "2024-12-13" ? 600 : 400,
+                      }}
+                    >
+                      {cert.expiry}
+                    </span>
+                  </td>
+                  <td>
+                    <StatusBadge status={cert.status} />
+                  </td>
+                  <td>
+                    <Link href={`/tasks/${cert.taskRef}`} className="link-action" style={{ fontSize: 12 }}>
+                      {cert.taskRef}
+                    </Link>
+                  </td>
+                  <td>
+                    <StatusBadge status={cert.verified ? "verified" : "unverified"} />
+                  </td>
+                  <td>
+                    {!cert.verified && canVerify && (
+                      <button
+                        onClick={() => setSelected(cert)}
+                        className="btn-outline"
+                        style={{ fontSize: 12, padding: "5px 10px" }}
+                      >
+                        Verify
+                      </button>
+                    )}
+                  </td>
+                </tr>
+              ))
+            )}
           </tbody>
         </table>
       </div>
+      {!canVerify && (
+        <div className="text-xs" style={{ color: "#6B7280" }}>
+          Your role ({cap(role)}) cannot verify certificates.
+        </div>
+      )}
     </div>
   );
 }
