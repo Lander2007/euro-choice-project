@@ -26,9 +26,11 @@ const EMPTY: FormState = {
 };
 
 export default function NewTaskModal({ onClose }: { onClose: () => void }) {
-  const { addTask, pushToast, user, role } = useApp();
+  const { addTask, pushToast, user, role, peekNextTaskId } = useApp();
   const [form, setForm] = useState<FormState>({ ...EMPTY, assignee: user });
   const [errors, setErrors] = useState<Partial<Record<keyof FormState, string>>>({});
+  // ID preview is fixed when the modal opens so it stays stable while filling the form.
+  const [previewId] = useState(() => peekNextTaskId());
 
   const set = (key: keyof FormState, value: string) => {
     setForm((f) => ({ ...f, [key]: value }));
@@ -95,6 +97,18 @@ export default function NewTaskModal({ onClose }: { onClose: () => void }) {
         </div>
 
         <div className="grid grid-cols-2 gap-4 mb-5">
+          <div className="col-span-2">
+            <label className="field-label" htmlFor="new-task-id">Task ID</label>
+            <input
+              id="new-task-id"
+              value={previewId}
+              disabled
+              readOnly
+              className="ctrl-input w-full"
+              aria-label="Task ID, auto-assigned and read-only"
+              style={{ background: "var(--sunken)", cursor: "not-allowed" }}
+            />
+          </div>
           <div className="col-span-1">
             {field("dept", "Department *", (
               <select id="new-dept" value={form.dept} onChange={(e) => set("dept", e.target.value)} className="ctrl-select w-full">

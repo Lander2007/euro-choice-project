@@ -1,5 +1,5 @@
 "use client";
-import React, { createContext, useCallback, useContext, useMemo, useState } from "react";
+import React, { createContext, useCallback, useContext, useEffect, useMemo, useState } from "react";
 
 /* ── Types ─────────────────────────────────────────────────── */
 export type Role = "requester" | "receiver" | "approver" | "admin";
@@ -184,6 +184,7 @@ function seedLogs(): Record<string, LogEntry[]> {
 interface AppState {
   user: string;
   role: Role;
+  ready: boolean;
   tasks: Task[];
   certs: Cert[];
   remarks: Record<string, Remark[]>;
@@ -195,6 +196,7 @@ interface AppState {
   dismissToast: (id: number) => void;
   addTask: (data: Omit<Task, "id" | "status" | "submitted">) => Task;
   cloneTask: (id: string) => Task | null;
+  peekNextTaskId: () => string;
   transitionTask: (id: string, action: StatusAction, reason?: string) => void;
   addRemark: (taskId: string, text: string) => void;
   toggleCertVerified: (certId: string) => void;
@@ -214,13 +216,24 @@ let toastSeq = 1;
 let taskSeq = 891;
 
 export function AppProvider({ children }: { children: React.ReactNode }) {
-  const [user, setUser] = useState<string>(() => readSession("prtcms_user", ""));
-  const [role, setRole] = useState<Role>(() => (readSession("prtcms_role", "requester") as Role) || "requester");
+  // Fallback-only initial state so the first client render matches the
+  // server prerender. The real session is hydrated in the effect below —
+  // reading localStorage during render would cause hydration mismatches.
+  const [user, setUser] = useState<string>("");
+  const [role, setRole] = useState<Role>("requester");
+  const [ready, setReady] = useState(false);
   const [tasks, setTasks] = useState<Task[]>(SEED_TASKS);
   const [certs, setCerts] = useState<Cert[]>(SEED_CERTS);
   const [remarks, setRemarks] = useState<Record<string, Remark[]>>(SEED_REMARKS);
   const [logs, setLogs] = useState<Record<string, LogEntry[]>>(seedLogs);
   const [toasts, setToasts] = useState<Toast[]>([]);
+
+  useEffect(() => {
+    setUser(readSession("prtcms_user", ""));
+    const stored = readSession("prtcms_role", "requester") as Role;
+    setRole(PERMISSIONS[stored] ? stored : "requester");
+    setReady(true);
+  }, []);
 
   const dismissToast = useCallback((id: number) => {
     setToasts((prev) => prev.filter((t) => t.id !== id));
@@ -266,8 +279,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     return task;
   }, []);
 
-  const cloneTask = useCallback((id: string) => {
-    const src = tasks.find((t) => t.id === id);
+  const cloneTask = useCallback((id: string) => {    const src = tasks.find((t) => t.id === id);
     if (!src) return null;
     const task: Task = {
       ...src,
@@ -283,6 +295,10 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     }));
     return task;
   }, [tasks]);
+
+  const peekNextTaskId = useCallback(() => {
+    return `TSK-2024-${String(taskSeq).padStart(4, "0")}`;
+  }, []);
 
   const transitionTask = useCallback((id: string, action: StatusAction, reason?: string) => {
     const task = tasks.find((t) => t.id === id);
@@ -333,11 +349,11 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
   const certsForTask = useCallback((taskId: string) => certs.filter((c) => c.taskRef === taskId), [certs]);
 
   const value = useMemo<AppState>(() => ({
-    user, role, tasks, certs, remarks, logs, toasts,
+    user, role, ready, tasks, certs, remarks, logs, toasts,
     login, logout, pushToast, dismissToast,
-    addTask, cloneTask, transitionTask, addRemark,
+    addTask, cloneTask, peekNextTaskId, transitionTask, addRemark,
     toggleCertVerified, verifyCert, getTask, certsForTask,
-  }), [user, role, tasks, certs, remarks, logs, toasts, login, logout, pushToast, dismissToast, addTask, cloneTask, transitionTask, addRemark, toggleCertVerified, verifyCert, getTask, certsForTask]);
+  }), [user, role, ready, tasks, certs, remarks, logs, toasts, login, logout, pushToast, dismissToast, addTask, cloneTask, peekNextTaskId, transitionTask, addRemark, toggleCertVerified, verifyCert, getTask, certsForTask]);
 
   return <AppContext.Provider value={value}>{children}</AppContext.Provider>;
 }

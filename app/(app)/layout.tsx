@@ -14,12 +14,12 @@ const ALL_NAV = [
 export default function AppLayout({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
   const router   = useRouter();
-  const { user, role, logout } = useApp();
+  const { user, role, logout, ready } = useApp();
   const [drawerOpen, setDrawerOpen] = useState(false);
 
   useEffect(() => {
-    if (!user) router.push("/");
-  }, [user, router]);
+    if (ready && !user) router.push("/");
+  }, [ready, user, router]);
 
   useEffect(() => {
     setDrawerOpen(false);
