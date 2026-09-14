@@ -1,11 +1,12 @@
 "use client";
 import { useState } from "react";
-import { TODAY, useApp } from "../store/AppStore";
+import { useApp } from "../store/AppStore";
 
 const DEPARTMENTS = ["Maintenance", "Operations", "Safety", "Inspection", "HSE", "Engineering", "Utilities", "Pipeline", "Logistics"];
 const PERMIT_TYPES = ["Hot Work Permit", "Cold Work Permit", "Confined Space Entry", "Height Work Permit", "Excavation Permit", "Electrical Isolation"];
 
 interface FormState {
+  taskId: string;
   dept: string;
   area: string;
   type: string;
@@ -16,21 +17,23 @@ interface FormState {
 }
 
 const EMPTY: FormState = {
+  taskId: "",
   dept: "",
   area: "",
   type: "",
   shortDesc: "",
   assignee: "",
-  validityStart: TODAY,
-  validityEnd: TODAY,
+  validityStart: "",
+  validityEnd: "",
 };
 
 export default function NewTaskModal({ onClose }: { onClose: () => void }) {
-  const { addTask, pushToast, user, role, peekNextTaskId } = useApp();
+  const { addTask, pushToast, user, role, peekNextTaskId, tasks } = useApp();
   const [form, setForm] = useState<FormState>({ ...EMPTY, assignee: user });
   const [errors, setErrors] = useState<Partial<Record<keyof FormState, string>>>({});
-  // ID preview is fixed when the modal opens so it stays stable while filling the form.
-  const [previewId] = useState(() => peekNextTaskId());
+  // Suggested next ID shown as a hint only — the operator types the Task ID
+  // manually to match the paper-based workflow (never auto-assigned).
+  const [suggestedId] = useState(() => peekNextTaskId());
 
   const set = (key: keyof FormState, value: string) => {
     setForm((f) => ({ ...f, [key]: value }));
@@ -39,6 +42,11 @@ export default function NewTaskModal({ onClose }: { onClose: () => void }) {
 
   const validate = (): boolean => {
     const next: Partial<Record<keyof FormState, string>> = {};
+    if (!form.taskId.trim()) {
+      next.taskId = "Task ID is required — enter it as written on the paper form.";
+    } else if (tasks.some((t) => t.id.toLowerCase() === form.taskId.trim().toLowerCase())) {
+      next.taskId = "This Task ID already exists. Enter a unique ID.";
+    }
     if (!form.dept) next.dept = "Department is required.";
     if (!form.area.trim()) next.area = "Area / unit is required.";
     if (!form.type) next.type = "Permit type is required.";
@@ -56,6 +64,7 @@ export default function NewTaskModal({ onClose }: { onClose: () => void }) {
   const handleSubmit = () => {
     if (!validate()) return;
     const task = addTask({
+      id: form.taskId.trim(),
       dept: form.dept,
       area: form.area.trim(),
       type: form.type,
@@ -98,16 +107,23 @@ export default function NewTaskModal({ onClose }: { onClose: () => void }) {
 
         <div className="grid grid-cols-2 gap-4 mb-5">
           <div className="col-span-2">
-            <label className="field-label" htmlFor="new-task-id">Task ID</label>
-            <input
-              id="new-task-id"
-              value={previewId}
-              disabled
-              readOnly
-              className="ctrl-input w-full"
-              aria-label="Task ID, auto-assigned and read-only"
-              style={{ background: "var(--sunken)", cursor: "not-allowed" }}
-            />
+            {field("taskId", "Task ID *", (
+              <input
+                id="new-taskId"
+                value={form.taskId}
+                onChange={(e) => set("taskId", e.target.value)}
+                className="ctrl-input w-full"
+                placeholder={`e.g. ${suggestedId}`}
+                aria-label="Task ID, entered manually"
+                aria-describedby="new-taskid-hint"
+                autoComplete="off"
+              />
+            ))}
+            {!errors.taskId && (
+              <div id="new-taskid-hint" className="text-xs mt-1" style={{ color: "#6B7280" }}>
+                Enter the ID from the paper form — next available: {suggestedId}
+              </div>
+            )}
           </div>
           <div className="col-span-1">
             {field("dept", "Department *", (

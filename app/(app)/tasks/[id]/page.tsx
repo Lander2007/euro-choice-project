@@ -41,11 +41,12 @@ export default function TaskDetailPage() {
     );
   }
 
-  const taskRemarks = remarks[task.id] || [];
-  const taskLogs = logs[task.id] || [];
+  const taskRemarks = [...(remarks[task.id] || [])].sort((a, b) => a.ts.localeCompare(b.ts));
+  const taskLogs = [...(logs[task.id] || [])].sort((a, b) => a.ts.localeCompare(b.ts));
   const taskCerts = certsForTask(task.id);
   const actions = allowedActions(task.status, role);
   const canClone = can(role, "clone");
+  const isExpired = task.status === "expired";
 
   const stageIdx = PIPELINE_STAGES.findIndex(
     (s) => s.toLowerCase() === (task.status === "pending" ? "submitted" : task.status)
@@ -131,7 +132,9 @@ export default function TaskDetailPage() {
       </div>
       {actions.length === 0 && (
         <div className="text-xs" style={{ color: "#6B7280" }}>
-          No actions available — {cap(task.status)} is a final state or your role ({cap(role)}) cannot act on it.
+          {isExpired
+            ? "This task is Expired — a terminal state. It cannot be reopened or transitioned to any other status."
+            : `No actions available — ${cap(task.status)} is a final state or your role (${cap(role)}) cannot act on it.`}
         </div>
       )}
 
@@ -278,10 +281,19 @@ export default function TaskDetailPage() {
         )}
       </div>
 
-      {/* Remarks + Action log */}
+      {/* Remark History + Action History — kept strictly separate:
+          remarks are free-text notes only; status changes live in the action log. */}
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
         <div className="card p-5">
-          <div className="text-sm font-semibold mb-4" style={{ color: "var(--text)" }}>Remarks timeline</div>
+          <div className="flex items-baseline justify-between mb-1">
+            <div className="text-sm font-semibold" style={{ color: "var(--text)" }}>Remark History</div>
+            <div className="text-xs" style={{ color: "#9CA3AF" }}>
+              {taskRemarks.length} remark{taskRemarks.length !== 1 ? "s" : ""}
+            </div>
+          </div>
+          <p className="text-xs mb-4" style={{ color: "#6B7280" }}>
+            Free-text comments and notes only — status changes are recorded under Action History.
+          </p>
           <div className="space-y-4 mb-4">
             {taskRemarks.length === 0 && (
               <div className="text-xs" style={{ color: "#9CA3AF" }}>No remarks yet — be the first to comment.</div>
@@ -313,14 +325,30 @@ export default function TaskDetailPage() {
         </div>
 
         <div className="card p-5">
-          <div className="text-sm font-semibold mb-4" style={{ color: "var(--text)" }}>Action history log</div>
+          <div className="flex items-baseline justify-between mb-1">
+            <div className="text-sm font-semibold" style={{ color: "var(--text)" }}>Action History</div>
+            <div className="text-xs" style={{ color: "#9CA3AF" }}>
+              {taskLogs.length} {taskLogs.length !== 1 ? "entries" : "entry"}
+            </div>
+          </div>
+          <p className="text-xs mb-4" style={{ color: "#6B7280" }}>
+            Status changes and actions taken — who did what, and when.
+          </p>
           <div className="space-y-3">
+            {taskLogs.length === 0 && (
+              <div className="text-xs" style={{ color: "#9CA3AF" }}>No recorded actions yet.</div>
+            )}
             {taskLogs.map((a, i) => (
               <div key={i} className="flex items-start gap-3 pb-3" style={{ borderBottom: "1px solid var(--border-soft)" }}>
                 <span className="badge badge-grey flex-shrink-0">{a.action}</span>
                 <div>
                   <div className="text-xs font-medium" style={{ color: "var(--text)" }}>{a.user}</div>
                   {a.from && <div className="text-xs" style={{ color: "#6B7280" }}>{a.from} → {a.to}</div>}
+                  {a.detail && (
+                    <div className="text-xs mt-0.5 leading-snug" style={{ color: "#4B5563" }}>
+                      Reason: {a.detail}
+                    </div>
+                  )}
                   <div className="text-xs" style={{ color: "#9CA3AF" }}>{a.ts}</div>
                 </div>
               </div>

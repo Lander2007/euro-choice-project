@@ -43,6 +43,8 @@ export interface LogEntry {
   action: string;
   from: string | null;
   to: string;
+  /** Optional reason/note recorded with the action (e.g. return/reject reason). Shown in Action History only. */
+  detail?: string;
 }
 
 export interface Toast {
@@ -98,6 +100,9 @@ const ACTION_DEFS: (StatusAction & { from: string[] })[] = [
 ];
 
 export function allowedActions(status: string, role: Role): StatusAction[] {
+  // Business rule: Expired is a terminal state — it cannot be reopened
+  // or transitioned to any other status.
+  if (status === "expired") return [];
   // Legacy seed data uses "pending" for newly arrived requests — treat it
   // as the "submitted" pipeline stage so those tasks stay actionable.
   const stage = status === "pending" ? "submitted" : status;
@@ -162,8 +167,31 @@ const SEED_LOGS: Record<string, LogEntry[]> = {
     { ts: "2024-12-09 08:14", user: "Ahmed Al-Rashidi",   action: "Created",     from: null,        to: "Created"   },
     { ts: "2024-12-09 08:18", user: "Ahmed Al-Rashidi",   action: "Submitted",   from: "Created",   to: "Submitted" },
     { ts: "2024-12-09 10:31", user: "Samir Okafor",        action: "Received",    from: "Submitted", to: "Received"  },
-    { ts: "2024-12-09 15:47", user: "Eng. Layla Mansour",  action: "Returned",    from: "Received",  to: "Returned"  },
-    { ts: "2024-12-10 07:57", user: "Ahmed Al-Rashidi",   action: "Resubmitted", from: "Returned",  to: "Submitted" },
+    { ts: "2024-12-09 15:47", user: "Eng. Layla Mansour",  action: "Returned",    from: "Received",  to: "Returned", detail: "Gas test certificate must be less than 4 hours old at time of work start." },
+    { ts: "2024-12-10 07:57", user: "Ahmed Al-Rashidi",   action: "Submitted", from: "Returned",  to: "Submitted" },
+  ],
+  "TSK-2024-0884": [
+    { ts: "2024-12-13 08:05", user: "Omar Khalid",           action: "Created",   from: null,        to: "Created"   },
+    { ts: "2024-12-13 08:20", user: "Omar Khalid",           action: "Submitted", from: "Created",   to: "Submitted" },
+    { ts: "2024-12-13 11:02", user: "Samir Okafor",          action: "Received",  from: "Submitted", to: "Received"  },
+    { ts: "2024-12-13 13:40", user: "Samir Okafor",          action: "Rejected",  from: "Received",  to: "Rejected", detail: "Cable route crosses live instrument loop — reroute required." },
+  ],
+  "TSK-2024-0871": [
+    { ts: "2024-12-12 08:05", user: "Eng. Layla Mansour", action: "Created",   from: null,        to: "Created"   },
+    { ts: "2024-12-12 08:20", user: "Eng. Layla Mansour", action: "Submitted", from: "Created",   to: "Submitted" },
+    { ts: "2024-12-12 10:12", user: "Samir Okafor",       action: "Received",  from: "Submitted", to: "Received"  },
+    { ts: "2024-12-12 14:55", user: "Eng. Layla Mansour", action: "Returned",  from: "Received",  to: "Returned", detail: "Missing single-line diagram for breaker K-401." },
+  ],
+  "TSK-2024-0862": [
+    { ts: "2024-12-11 08:05", user: "Col. James Harrington", action: "Created",   from: null,        to: "Created"   },
+    { ts: "2024-12-11 08:20", user: "Col. James Harrington", action: "Submitted", from: "Created",   to: "Submitted" },
+    { ts: "2024-12-11 09:44", user: "Samir Okafor",          action: "Received",  from: "Submitted", to: "Received"  },
+    { ts: "2024-12-12 09:15", user: "Col. James Harrington", action: "Approved",  from: "Received",  to: "Approved"  },
+  ],
+  "TSK-2024-0868": [
+    { ts: "2024-12-12 08:05", user: "Ahmed Al-Rashidi", action: "Created",   from: null,      to: "Created" },
+    { ts: "2024-12-12 08:20", user: "Ahmed Al-Rashidi", action: "Submitted", from: "Created", to: "Submitted" },
+    { ts: "2024-12-12 12:30", user: "Samir Okafor",     action: "Received",  from: "Submitted", to: "Received" },
   ],
 };
 
@@ -194,7 +222,7 @@ interface AppState {
   logout: () => void;
   pushToast: (message: string) => void;
   dismissToast: (id: number) => void;
-  addTask: (data: Omit<Task, "id" | "status" | "submitted">) => Task;
+  addTask: (data: Omit<Task, "id" | "status" | "submitted"> & { id?: string }) => Task;
   cloneTask: (id: string) => Task | null;
   peekNextTaskId: () => string;
   transitionTask: (id: string, action: StatusAction, reason?: string) => void;
@@ -264,13 +292,25 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     setLogs((prev) => ({ ...prev, [taskId]: [...(prev[taskId] || []), entry] }));
   }, []);
 
-  const addTask = useCallback((data: Omit<Task, "id" | "status" | "submitted">) => {
+  const addTask = useCallback((data: Omit<Task, "id" | "status" | "submitted"> & { id?: string }) => {
+    // Paper-workflow parity: the operator types the Task ID manually.
+    // Fall back to the sequence only when the field is left blank.
+    const manualId = data.id?.trim();
     const task: Task = {
       ...data,
-      id: `TSK-2024-${String(taskSeq++).padStart(4, "0")}`,
+      id: manualId || `TSK-2024-${String(taskSeq++).padStart(4, "0")}`,
       status: "created",
       submitted: TODAY,
     };
+    // Keep the auto-sequence ahead of any manually entered numeric suffix
+    // so future auto IDs never collide (e.g. operator types TSK-2024-0895).
+    if (manualId) {
+      const m = manualId.match(/(\d+)\s*$/);
+      if (m) {
+        const n = parseInt(m[1], 10);
+        if (!Number.isNaN(n) && n >= taskSeq) taskSeq = n + 1;
+      }
+    }
     setTasks((prev) => [task, ...prev]);
     setLogs((prev) => ({
       ...prev,
@@ -303,23 +343,21 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
   const transitionTask = useCallback((id: string, action: StatusAction, reason?: string) => {
     const task = tasks.find((t) => t.id === id);
     if (!task) return;
+    // Business rule: Expired is terminal — no transitions allowed.
+    if (task.status === "expired") return;
     const fromLabel = cap(task.status);
     const toLabel = cap(action.to);
     setTasks((prev) => prev.map((t) => (t.id === id ? { ...t, status: action.to } : t)));
+    const cleanReason = reason?.trim();
     appendLog(id, {
       ts: nowStamp(),
       user,
       action: action.label + (action.id === "submit" && task.status === "returned" ? " (resubmitted)" : ""),
       from: fromLabel,
       to: toLabel,
+      ...(cleanReason ? { detail: cleanReason } : {}),
     });
-    if (reason && reason.trim()) {
-      setRemarks((prev) => ({
-        ...prev,
-        [id]: [...(prev[id] || []), { ts: nowStamp(), user, role: cap(role), text: `${action.label}: ${reason.trim()}` }],
-      }));
-    }
-  }, [tasks, user, role, appendLog]);
+  }, [tasks, user, appendLog]);
 
   const addRemark = useCallback((taskId: string, text: string) => {
     const clean = text.trim();

@@ -8,6 +8,7 @@ const ALL_NAV = [
   { path: "/dashboard",    label: "Dashboard",           roles: ["requester", "receiver", "approver", "admin"] as Role[] },
   { path: "/tasks",        label: "Tasks & Jobs",        roles: ["requester", "receiver", "approver", "admin"] as Role[] },
   { path: "/certificates", label: "Certificates",        roles: ["receiver", "approver", "admin"] as Role[] },
+  { path: "/history",      label: "History",             roles: ["admin"] as Role[] },
   { path: "/roles",        label: "Roles & Permissions", roles: ["approver", "admin"] as Role[] },
 ];
 

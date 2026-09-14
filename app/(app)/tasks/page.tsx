@@ -43,6 +43,10 @@ export default function TasksPage() {
   const TYPES    = useMemo(() => [...new Set(tasks.map((t) => t.type))], [tasks]);
   const STATUSES = useMemo(() => [...new Set(tasks.map((t) => t.status))], [tasks]);
 
+  // Visibility rule: EVERY authenticated user sees the full register.
+  // "All tasks" is never scoped by role or assignee — only the ability to
+  // act (submit/receive/approve/…) is gated by role + current status.
+  // "My pending actions" is an opt-in tab, never the default.
   let filtered = tasks.filter((t) => {
     const q = search.toLowerCase();
     return (
@@ -92,6 +96,7 @@ export default function TasksPage() {
           <h1 className="page-title">Tasks &amp; job register</h1>
           <p className="page-subtitle">
             Permit-to-work management — {filtered.length} record{filtered.length !== 1 ? "s" : ""} shown
+            {" · "}all tasks visible to every role (read-only unless your role can act)
           </p>
         </div>
         <button
