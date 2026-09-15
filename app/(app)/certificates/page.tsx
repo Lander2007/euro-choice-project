@@ -31,7 +31,15 @@ function VerifyModal({ cert, onClose }: { cert: Cert; onClose: () => void }) {
           <div className="text-base font-semibold" style={{ color: "var(--text)" }}>
             Manual verification
           </div>
-          <button onClick={onClose} className="btn-ghost" style={{ fontSize: 18, lineHeight: 1 }} aria-label="Close">×</button>
+          <button
+            onClick={onClose}
+            className="btn-ghost p-1.5 text-slate-400 hover:text-slate-700"
+            aria-label="Close"
+          >
+            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+            </svg>
+          </button>
         </div>
 
         <div className="rounded-md p-4 mb-4" style={{ background: "var(--bg)", border: "1px solid var(--border)" }}>
@@ -140,7 +148,8 @@ export default function CertificatesPage() {
         ))}
       </div>
 
-      <div className="table-wrap" style={{ overflowX: "auto" }}>
+      {/* Desktop Table View (≥ md) */}
+      <div className="hidden md:block table-wrap" style={{ overflowX: "auto" }}>
         <table style={{ minWidth: 980 }}>
           <thead>
             <tr>
@@ -225,6 +234,54 @@ export default function CertificatesPage() {
           </tbody>
         </table>
       </div>
+
+      {/* Mobile Card List View (< md) */}
+      <div className="md:hidden space-y-3">
+        {loading ? (
+          <div className="card p-6 text-center text-slate-500 text-sm">Loading certificates…</div>
+        ) : filtered.length === 0 ? (
+          <div className="card p-8 text-center">
+            <div className="text-sm font-semibold" style={{ color: "var(--text)" }}>No certificates found</div>
+            <div className="text-xs mt-1 text-slate-500">Try a different certificate type.</div>
+          </div>
+        ) : (
+          filtered.map((cert) => {
+            const isExpiring = cert.expiry <= "2024-12-13";
+            return (
+              <div key={cert.id} className="card-interactive p-4">
+                <div className="flex items-center justify-between mb-2">
+                  <span className="font-bold text-sm text-slate-900">{cert.id}</span>
+                  <div className="flex items-center gap-1.5">
+                    <StatusBadge status={cert.verified ? "verified" : "unverified"} />
+                    <StatusBadge status={cert.status} />
+                  </div>
+                </div>
+                <div className="text-sm font-semibold text-slate-800 mb-1">
+                  {cert.type}
+                </div>
+                <div className="text-xs text-slate-500 mb-2">
+                  Area: <strong className="text-slate-700">{cert.area}</strong> · Issuer: {cert.issuer}
+                </div>
+                <div className="flex items-center justify-between text-xs text-slate-500 pt-2 border-t border-slate-100 mb-3">
+                  <span>Task: <Link href={`/tasks/${cert.taskRef}`} className="text-blue-600 font-semibold">{cert.taskRef}</Link></span>
+                  <span className={isExpiring ? "font-semibold text-red-600 font-mono" : "font-mono"}>
+                    Expires: {cert.expiry}
+                  </span>
+                </div>
+                {!cert.verified && canVerify && (
+                  <button
+                    onClick={() => setSelected(cert)}
+                    className="btn-primary w-full text-xs py-2"
+                  >
+                    Verify Certificate
+                  </button>
+                )}
+              </div>
+            );
+          })
+        )}
+      </div>
+
       {!canVerify && (
         <div className="text-xs" style={{ color: "#6B7280" }}>
           Your role ({cap(role)}) cannot verify certificates.

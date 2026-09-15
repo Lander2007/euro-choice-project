@@ -216,8 +216,16 @@ export default function TaskDetailPage() {
           </div>
         </div>
         <div className="card p-5">
-          <div className="section-label mb-2">Description</div>
-          <div className="text-sm" style={{ color: "var(--text)" }}>{task.shortDesc}</div>
+          <div className="section-label mb-2">Description &amp; Work Scope</div>
+          <div className="text-sm font-medium text-slate-800">{task.shortDesc}</div>
+          {task.details && (
+            <div className="mt-4 pt-3 border-t border-slate-100">
+              <div className="section-label mb-1 text-slate-500">Detailed notes / Scope of work</div>
+              <p className="text-xs text-slate-700 whitespace-pre-wrap leading-relaxed bg-slate-50 p-3 rounded-lg border border-slate-100">
+                {task.details}
+              </p>
+            </div>
+          )}
         </div>
       </div>
 
@@ -356,6 +364,35 @@ export default function TaskDetailPage() {
           </div>
         </div>
       </div>
+
+      {/* ── Mobile Sticky Action Dock (< md) ── */}
+      {actions.length > 0 && (
+        <div className="md:hidden mobile-action-bar flex items-center gap-2">
+          {forward.map((a) => (
+            <button
+              key={a.id}
+              className="btn-primary flex-1 py-2.5 text-xs font-bold shadow-sm"
+              onClick={() => runAction(a)}
+            >
+              {a.label}
+            </button>
+          ))}
+          {review.map((a) => (
+            <button
+              key={a.id}
+              className={`flex-1 py-2.5 text-xs font-semibold ${a.id === "reject" ? "btn-danger" : "btn-secondary"}`}
+              onClick={() => setConfirming(a)}
+            >
+              {a.label}
+            </button>
+          ))}
+          {terminal.map((a) => (
+            <button key={a.id} className="btn-secondary py-2.5 text-xs px-3" onClick={() => setConfirming(a)}>
+              {a.label}
+            </button>
+          ))}
+        </div>
+      )}
     </div>
   );
 }

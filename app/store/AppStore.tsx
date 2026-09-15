@@ -10,6 +10,7 @@ export interface Task {
   dept: string;
   type: string;
   shortDesc: string;
+  details?: string;
   submitted: string;
   validityStart: string;
   validityEnd: string;

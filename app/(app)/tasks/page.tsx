@@ -72,10 +72,16 @@ export default function TasksPage() {
       });
   }
 
-  const VIEWS: { key: View; label: string }[] = [
-    { key: "all",      label: "All tasks" },
-    { key: "pending",  label: "My pending actions" },
-    { key: "tomorrow", label: "Planning tomorrow" },
+  const pendingCount = useMemo(() => pendingForRole(tasks, role).length, [tasks, role]);
+  const tomorrowCount = useMemo(
+    () => tasks.filter((t) => t.validityEnd <= TOMORROW && !["closed", "cancelled"].includes(t.status)).length,
+    [tasks]
+  );
+
+  const VIEWS: { key: View; label: string; count: number }[] = [
+    { key: "all",      label: "All tasks",          count: tasks.length },
+    { key: "pending",  label: "My pending actions", count: pendingCount },
+    { key: "tomorrow", label: "Planning tomorrow",  count: tomorrowCount },
   ];
 
   const handleClone = (id: string) => {
@@ -105,20 +111,24 @@ export default function TasksPage() {
           disabled={!canCreate}
           title={canCreate ? "Create a new task" : `Your role (${role}) cannot create tasks`}
         >
-          + New task
+          <svg className="w-3.5 h-3.5 -ml-0.5 text-slate-900" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M12 4v16m8-8H4" />
+          </svg>
+          <span>New task</span>
         </button>
       </div>
 
       {/* View tabs */}
-      <div className="flex items-center flex-wrap" style={{ borderBottom: "1px solid var(--border)" }}>
-        {VIEWS.map(({ key, label }) => (
+      <div className="flex items-center flex-wrap" style={{ borderBottom: "1px solid #E2E8F0" }}>
+        {VIEWS.map(({ key, label, count }) => (
           <button
             key={key}
             onClick={() => setView(key)}
             className={`tab-btn ${view === key ? "active" : ""}`}
             aria-pressed={view === key}
           >
-            {label}
+            <span>{label}</span>
+            <span className="tab-count">{count}</span>
           </button>
         ))}
         {view === "tomorrow" && (
@@ -126,7 +136,7 @@ export default function TasksPage() {
             onClick={() => setSortAlpha((a) => !a)}
             aria-pressed={sortAlpha}
             className="btn-secondary ml-auto"
-            style={{ fontSize: 13, padding: "6px 12px", marginBottom: 8 }}
+            style={{ fontSize: 12, padding: "5px 10px", marginBottom: 6 }}
           >
             Sort A–Z {sortAlpha ? "on" : "off"}
           </button>
@@ -157,12 +167,12 @@ export default function TasksPage() {
         </select>
       </div>
 
-      {/* Table */}
-      <div className="table-wrap" style={{ overflowX: "auto" }}>
+      {/* Desktop Table View (≥ md) */}
+      <div className="hidden md:block table-wrap" style={{ overflowX: "auto" }}>
         <table style={{ minWidth: 960 }}>
           <thead>
             <tr>
-              <th style={{ width: 48 }}>#</th>
+              <th style={{ width: 44 }}>#</th>
               <th>Task ID</th>
               <th>Area / Unit</th>
               <th>Department</th>
@@ -171,7 +181,7 @@ export default function TasksPage() {
               <th>Valid until</th>
               <th>Status</th>
               <th>Assigned to</th>
-              <th>Actions</th>
+              <th style={{ textAlign: "right" }}>Actions</th>
             </tr>
           </thead>
           <tbody>
@@ -188,34 +198,32 @@ export default function TasksPage() {
               filtered.map((task, idx) => (
                 <tr key={task.id}>
                   <td>
-                    <span className="text-xs" style={{ color: "#9CA3AF" }}>
+                    <span className="text-xs font-mono" style={{ color: "#94A3B8" }}>
                       {String(idx + 1).padStart(3, "0")}
                     </span>
                   </td>
                   <td>
-                    <Link href={`/tasks/${task.id}`} className="link-action">
+                    <Link href={`/tasks/${task.id}`} className="font-mono text-xs font-semibold text-blue-600 hover:text-blue-800 hover:underline">
                       {task.id}
                     </Link>
                   </td>
                   <td>
-                    <span className="text-sm" style={{ color: "var(--text)" }}>{task.area}</span>
+                    <span className="text-xs font-semibold text-slate-800">{task.area}</span>
                   </td>
                   <td>
-                    <span className="text-xs" style={{ color: "#6B7280" }}>{task.dept}</span>
+                    <span className="text-xs text-slate-600">{task.dept}</span>
                   </td>
                   <td>
-                    <span className="text-xs" style={{ color: "var(--text)" }}>{task.type}</span>
+                    <span className="text-xs text-slate-700">{task.type}</span>
                   </td>
                   <td>
-                    <span className="text-xs" style={{ color: "#6B7280" }}>{task.submitted}</span>
+                    <span className="text-xs font-mono text-slate-500">{task.submitted}</span>
                   </td>
                   <td>
                     <span
-                      className="text-xs"
-                      style={{
-                        color: task.validityEnd <= TOMORROW ? "#D64545" : "var(--text)",
-                        fontWeight: task.validityEnd <= TOMORROW ? 600 : 400,
-                      }}
+                      className={`text-xs font-mono ${
+                        task.validityEnd <= TOMORROW ? "text-red-600 font-semibold" : "text-slate-600"
+                      }`}
                     >
                       {task.validityEnd}
                     </span>
@@ -224,19 +232,22 @@ export default function TasksPage() {
                     <StatusBadge status={task.status} />
                   </td>
                   <td>
-                    <div className="text-xs" style={{ color: "var(--text)" }}>{task.assignee}</div>
-                    <div className="text-xs" style={{ color: "#9CA3AF" }}>{task.assigneeRole}</div>
+                    <div className="text-xs font-medium text-slate-800">{task.assignee}</div>
+                    <div className="text-[11px] text-slate-400">{task.assigneeRole}</div>
                   </td>
-                  <td>
-                    <div className="flex gap-1">
-                      <Link href={`/tasks/${task.id}`}>
-                        <button className="btn-ghost">View</button>
+                  <td style={{ textAlign: "right" }}>
+                    <div className="flex gap-2 justify-end items-center">
+                      <Link href={`/tasks/${task.id}`} className="btn-table-action">
+                        <span>View</span>
+                        <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+                        </svg>
                       </Link>
                       {canClone && (
                         <button
-                          className="btn-outline"
-                          style={{ fontSize: 12, padding: "5px 10px" }}
+                          className="text-xs text-slate-500 hover:text-slate-800 bg-transparent border-none cursor-pointer hover:underline px-1 py-0.5"
                           onClick={() => handleClone(task.id)}
+                          title="Duplicate task as draft"
                         >
                           Clone
                         </button>
@@ -248,6 +259,62 @@ export default function TasksPage() {
             )}
           </tbody>
         </table>
+      </div>
+
+      {/* Mobile Card List View (< md) */}
+      <div className="md:hidden space-y-3">
+        {loading ? (
+          <div className="card p-6 text-center text-slate-500 text-sm">Loading tasks…</div>
+        ) : filtered.length === 0 ? (
+          <div className="card p-8 text-center">
+            <div className="text-sm font-semibold" style={{ color: "var(--text)" }}>No tasks match your filters</div>
+            <div className="text-xs mt-1 text-slate-500">Try clearing the search or choosing different filters.</div>
+          </div>
+        ) : (
+          filtered.map((task) => {
+            const isUrgent = task.validityEnd <= TOMORROW;
+            return (
+              <div key={task.id} className="card-interactive p-4">
+                <div className="flex items-center justify-between mb-2">
+                  <Link href={`/tasks/${task.id}`} className="font-bold text-sm text-blue-600 hover:underline">
+                    {task.id}
+                  </Link>
+                  <StatusBadge status={task.status} />
+                </div>
+                <div className="text-sm font-bold text-slate-900 mb-0.5">
+                  {task.area}
+                </div>
+                <div className="text-xs text-slate-500 mb-2">
+                  {task.type} · <span className="text-slate-700 font-medium">{task.dept}</span>
+                </div>
+                <div className="text-xs text-slate-700 mb-3 bg-slate-50 p-2 rounded border border-slate-100 line-clamp-2">
+                  {task.shortDesc}
+                </div>
+                <div className="flex items-center justify-between text-xs text-slate-500 pt-2 border-t border-slate-100 mb-3">
+                  <span>Assigned: <strong className="text-slate-700">{task.assignee}</strong></span>
+                  <span className={isUrgent ? "font-semibold text-red-600 font-mono" : "font-mono"}>
+                    Due: {task.validityEnd}
+                  </span>
+                </div>
+                <div className="flex items-center gap-2">
+                  <Link href={`/tasks/${task.id}`} className="flex-1" style={{ textDecoration: "none" }}>
+                    <button className="btn-secondary w-full text-xs py-2">
+                      View Details
+                    </button>
+                  </Link>
+                  {canClone && (
+                    <button
+                      className="btn-outline text-xs py-2 px-3"
+                      onClick={() => handleClone(task.id)}
+                    >
+                      Clone
+                    </button>
+                  )}
+                </div>
+              </div>
+            );
+          })
+        )}
       </div>
     </div>
   );

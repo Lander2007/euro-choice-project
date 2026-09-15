@@ -19,6 +19,9 @@ function toneFor(status: string): string {
   switch (status) {
     case "approved":
     case "verified":
+      return "badge-green";
+    case "pending":
+    case "returned":
       return "badge-yellow";
     case "submitted":
     case "ongoing":
@@ -31,7 +34,33 @@ function toneFor(status: string): string {
   }
 }
 
+function dotColorFor(status: string): string {
+  switch (status) {
+    case "approved":
+    case "verified":
+      return "bg-emerald-500";
+    case "pending":
+    case "returned":
+      return "bg-amber-500";
+    case "submitted":
+    case "ongoing":
+      return "bg-blue-500";
+    case "expired":
+    case "rejected":
+      return "bg-rose-500";
+    default:
+      return "bg-slate-400";
+  }
+}
+
 export default function StatusBadge({ status }: { status: string }) {
   const label = STATUS_LABEL[status] || status;
-  return <span className={`badge ${toneFor(status)}`}>{label}</span>;
+  const tone = toneFor(status);
+  const dot = dotColorFor(status);
+  return (
+    <span className={`badge ${tone}`}>
+      <span className={`w-1.5 h-1.5 rounded-full mr-1.5 shrink-0 ${dot}`} />
+      <span>{label}</span>
+    </span>
+  );
 }
