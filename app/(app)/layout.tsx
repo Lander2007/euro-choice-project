@@ -7,7 +7,6 @@ import { cap, useApp, type Role } from "../store/AppStore";
 const ALL_NAV = [
   { path: "/dashboard",    label: "Dashboard",       roles: ["requester", "receiver", "approver", "admin"] as Role[] },
   { path: "/tasks",        label: "Tasks & Permits", roles: ["requester", "receiver", "approver", "admin"] as Role[] },
-  { path: "/certificates", label: "Certificates",    roles: ["receiver", "approver", "admin"] as Role[] },
   { path: "/history",      label: "Audit History",   roles: ["admin"] as Role[] },
   { path: "/roles",        label: "Roles & Access",  roles: ["approver", "admin"] as Role[] },
 ];
@@ -165,14 +164,6 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
         >
           <span>Tasks</span>
         </Link>
-        {(role === "receiver" || role === "approver" || role === "admin") && (
-          <Link
-            href="/certificates"
-            className={`bottom-nav-item ${pathname === "/certificates" ? "active" : ""}`}
-          >
-            <span>Certificates</span>
-          </Link>
-        )}
         <button
           onClick={() => setDrawerOpen(true)}
           className="bottom-nav-item bg-transparent border-none cursor-pointer"
