@@ -16,6 +16,7 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
   const router   = useRouter();
   const { user, role, logout, ready } = useApp();
   const [drawerOpen, setDrawerOpen] = useState(false);
+  const [sidebarOpen, setSidebarOpen] = useState(true);
 
   useEffect(() => {
     if (ready && !user) router.push("/");
@@ -28,6 +29,14 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
   const handleLogout = () => {
     logout();
     router.push("/");
+  };
+
+  const handleToggleSidebar = () => {
+    if (typeof window !== "undefined" && window.innerWidth < 768) {
+      setDrawerOpen((o) => !o);
+    } else {
+      setSidebarOpen((o) => !o);
+    }
   };
 
   const navItems = ALL_NAV.filter((n) => n.roles.includes(role));
@@ -57,10 +66,11 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
       >
         <div className="flex items-center gap-3">
           <button
-            className="btn-ghost md:hidden p-1 text-slate-300 hover:text-white"
-            onClick={() => setDrawerOpen((o) => !o)}
-            aria-label="Toggle navigation"
-            aria-expanded={drawerOpen}
+            className="btn-ghost p-1.5 text-slate-300 hover:text-white hover:bg-slate-800 rounded-md transition-colors flex items-center justify-center cursor-pointer"
+            onClick={handleToggleSidebar}
+            aria-label="Toggle navigation sidebar"
+            aria-expanded={sidebarOpen}
+            title="Toggle sidebar"
           >
             <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 12h16M4 18h16" />
@@ -91,18 +101,35 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
 
         {/* ── Sidebar (desktop) ── */}
         <aside
-          className="chrome hidden md:flex"
+          className="chrome hidden md:flex flex-col transition-all duration-300 ease-in-out overflow-hidden flex-shrink-0"
           style={{
-            width: 220,
-            minWidth: 220,
-            borderRight: "1px solid var(--chrome-border)",
-            flexDirection: "column",
-            padding: "16px 10px",
+            width: sidebarOpen ? 220 : 0,
+            minWidth: sidebarOpen ? 220 : 0,
+            borderRight: sidebarOpen ? "1px solid var(--chrome-border)" : "none",
+            padding: sidebarOpen ? "16px 10px" : "16px 0",
+            opacity: sidebarOpen ? 1 : 0,
+            pointerEvents: sidebarOpen ? "auto" : "none",
           }}
+          aria-hidden={!sidebarOpen}
         >
-          {nav}
-          <div className="text-[11px] px-3 pt-3" style={{ color: "var(--chrome-muted)", borderTop: "1px solid var(--chrome-border)" }}>
-            Industrial ERP v2.5
+          <div style={{ width: 200, minWidth: 200 }} className="flex flex-col flex-1">
+            {nav}
+            <div
+              className="text-[11px] px-3 pt-3 flex items-center justify-between"
+              style={{ color: "var(--chrome-muted)", borderTop: "1px solid var(--chrome-border)" }}
+            >
+              <span>Industrial ERP v2.5</span>
+              <button
+                onClick={() => setSidebarOpen(false)}
+                className="text-slate-400 hover:text-white p-1 rounded hover:bg-slate-800 transition-colors"
+                title="Collapse sidebar"
+                aria-label="Collapse sidebar"
+              >
+                <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 19l-7-7 7-7m8 14l-7-7 7-7" />
+                </svg>
+              </button>
+            </div>
           </div>
         </aside>
 
