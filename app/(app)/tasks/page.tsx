@@ -80,7 +80,11 @@ export default function TasksPage() {
     return entries && entries.length > 0 ? entries[entries.length - 1].ts : "";
   };
 
-  const clearSorts = () => {
+  const clearAll = () => {
+    setSearch("");
+    setFilterDept("all");
+    setFilterType("all");
+    setFilterStatus("all");
     setSortAlpha("default");
     setSortSubmitted("default");
     setSortDue("default");
@@ -90,6 +94,9 @@ export default function TasksPage() {
   const hasActiveSort =
     sortAlpha !== "default" || sortSubmitted !== "default" || sortDue !== "default" ||
     sortUpdated !== "default" || sortId !== "default";
+  const hasActiveFilter =
+    search !== "" || filterDept !== "all" || filterType !== "all" || filterStatus !== "all";
+  const hasActiveAny = hasActiveSort || hasActiveFilter;
 
   const activeSort: string =
     sortAlpha !== "default" ? sortAlpha :
@@ -303,12 +310,12 @@ export default function TasksPage() {
             <option value="id-asc">Ascending</option>
             <option value="id-desc">Descending</option>
           </select>
-          {hasActiveSort && (
+          {hasActiveAny && (
             <button
-              onClick={clearSorts}
+              onClick={clearAll}
               className="btn-ghost"
               style={{ fontSize: 12, padding: "4px 8px", flexShrink: 0 }}
-              title="Clear all sorting"
+              title="Clear search, filters and sorting"
             >
               Clear ✕
             </button>
