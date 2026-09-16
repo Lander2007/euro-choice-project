@@ -147,7 +147,7 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
 
         {/* ── Main content ── */}
         <main className="flex-1 overflow-auto pb-20 md:pb-6" style={{ padding: "20px clamp(14px, 3vw, 28px)" }}>
-          <div style={{ maxWidth: 1200, margin: "0 auto" }}>{children}</div>
+          <div style={{ width: "100%", maxWidth: "100%", margin: 0 }}>{children}</div>
         </main>
       </div>
 

@@ -20,15 +20,22 @@ logs/
 # beside it.
 /.plugins/
 /.opencode-skills/
-/.agnets
-/.augment
-/.aider-desk
-/.autohand
-/.bob
-/.claude
-/.codeartsdoer
-/.codebuddy
-/.codemaker
-/.codestudio
-/.openhands
-/.windsurf
+/.agents/
+/.aider-desk/
+/.augment/
+/.autohand/
+/.bob/
+/.claude/
+/.codeartsdoer/
+/.codebuddy/
+/.codemaker/
+/.codestudio/
+/.lingma/
+/.openhands/
+/.windsurf/
+
+# Duplicated skill installs (identical copies of the agent skills above,
+# verified same file hash) - not project source.
+/skills/
+/data/
+skills-lock.json

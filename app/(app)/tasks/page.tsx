@@ -24,13 +24,22 @@ function SkeletonRows({ cols }: { cols: number }) {
 }
 
 export default function TasksPage() {
-  const { tasks, role, cloneTask, pushToast } = useApp();
+  const { tasks, role, cloneTask, pushToast, logs } = useApp();
   const [search,       setSearch]       = useState("");
   const [filterDept,   setFilterDept]   = useState("all");
   const [filterType,   setFilterType]   = useState("all");
   const [filterStatus, setFilterStatus] = useState("all");
   const [view,         setView]         = useState<View>("all");
-  const [sortAlpha,    setSortAlpha]    = useState(false);
+  type AlphaSel = "default" | "area-az" | "area-za";
+  type SubmittedSel = "default" | "submitted-newest" | "submitted-oldest";
+  type DueSel = "default" | "due-soonest" | "expiring-first";
+  type UpdatedSel = "default" | "updated-recent" | "updated-oldest";
+  type IdSel = "default" | "id-asc" | "id-desc";
+  const [sortAlpha,     setSortAlpha]     = useState<AlphaSel>("default");
+  const [sortSubmitted, setSortSubmitted] = useState<SubmittedSel>("default");
+  const [sortDue,       setSortDue]       = useState<DueSel>("default");
+  const [sortUpdated,   setSortUpdated]   = useState<UpdatedSel>("default");
+  const [sortId,        setSortId]        = useState<IdSel>("default");
   const [showNew,      setShowNew]      = useState(false);
   const [loading,      setLoading]      = useState(true);
 
@@ -62,14 +71,57 @@ export default function TasksPage() {
     filtered = filtered.filter((t) => pendingIds.has(t.id));
   }
   if (view === "tomorrow") {
-    // Due tomorrow or already overdue, most urgent first
-    filtered = filtered
-      .filter((t) => t.validityEnd <= TOMORROW && !["closed", "cancelled"].includes(t.status))
-      .sort((a, b) => {
-        if (sortAlpha) return a.area.localeCompare(b.area);
-        const urg = (s: string) => (["expired", "rejected"].includes(s) ? 0 : 1);
-        return urg(a.status) - urg(b.status) || a.validityEnd.localeCompare(b.validityEnd);
-      });
+    // Due tomorrow or already overdue, most urgent first (default)
+    filtered = filtered.filter((t) => t.validityEnd <= TOMORROW && !["closed", "cancelled"].includes(t.status));
+  }
+
+  const lastTs = (id: string) => {
+    const entries = logs[id];
+    return entries && entries.length > 0 ? entries[entries.length - 1].ts : "";
+  };
+
+  const clearSorts = () => {
+    setSortAlpha("default");
+    setSortSubmitted("default");
+    setSortDue("default");
+    setSortUpdated("default");
+    setSortId("default");
+  };
+  const hasActiveSort =
+    sortAlpha !== "default" || sortSubmitted !== "default" || sortDue !== "default" ||
+    sortUpdated !== "default" || sortId !== "default";
+
+  const activeSort: string =
+    sortAlpha !== "default" ? sortAlpha :
+    sortSubmitted !== "default" ? sortSubmitted :
+    sortDue !== "default" ? sortDue :
+    sortUpdated !== "default" ? sortUpdated :
+    sortId !== "default" ? sortId : "default";
+
+  if (activeSort !== "default") {
+    filtered = [...filtered].sort((a, b) => {
+      switch (activeSort) {
+        case "area-az":          return a.area.localeCompare(b.area);
+        case "area-za":          return b.area.localeCompare(a.area);
+        case "submitted-newest": return b.submitted.localeCompare(a.submitted);
+        case "submitted-oldest": return a.submitted.localeCompare(b.submitted);
+        case "due-soonest":      return a.validityEnd.localeCompare(b.validityEnd);
+        case "expiring-first": {
+          const urg = (s: string) => (["expired", "rejected"].includes(s) ? 0 : 1);
+          return urg(a.status) - urg(b.status) || a.validityEnd.localeCompare(b.validityEnd);
+        }
+        case "updated-recent":   return lastTs(b.id).localeCompare(lastTs(a.id));
+        case "updated-oldest":   return lastTs(a.id).localeCompare(lastTs(b.id));
+        case "id-asc":           return a.id.localeCompare(b.id);
+        case "id-desc":          return b.id.localeCompare(a.id);
+        default: return 0;
+      }
+    });
+  } else if (view === "tomorrow") {
+    filtered = [...filtered].sort((a, b) => {
+      const urg = (s: string) => (["expired", "rejected"].includes(s) ? 0 : 1);
+      return urg(a.status) - urg(b.status) || a.validityEnd.localeCompare(b.validityEnd);
+    });
   }
 
   const pendingCount = useMemo(() => pendingForRole(tasks, role).length, [tasks, role]);
@@ -93,7 +145,7 @@ export default function TasksPage() {
   const canClone = can(role, "clone");
 
   return (
-    <div className="space-y-5">
+    <div className="space-y-3">
       {showNew && <NewTaskModal onClose={() => setShowNew(false)} />}
 
       {/* Header */}
@@ -118,53 +170,150 @@ export default function TasksPage() {
         </button>
       </div>
 
-      {/* View tabs */}
+      {/* View tabs (compact to give the toolbar room) */}
       <div className="flex items-center flex-wrap" style={{ borderBottom: "1px solid #E2E8F0" }}>
         {VIEWS.map(({ key, label, count }) => (
           <button
             key={key}
             onClick={() => setView(key)}
             className={`tab-btn ${view === key ? "active" : ""}`}
+            style={{ padding: "6px 4px", marginRight: 16 }}
             aria-pressed={view === key}
           >
             <span>{label}</span>
             <span className="tab-count">{count}</span>
           </button>
         ))}
-        {view === "tomorrow" && (
-          <button
-            onClick={() => setSortAlpha((a) => !a)}
-            aria-pressed={sortAlpha}
-            className="btn-secondary ml-auto"
-            style={{ fontSize: 12, padding: "5px 10px", marginBottom: 6 }}
-          >
-            Sort A–Z {sortAlpha ? "on" : "off"}
-          </button>
-        )}
       </div>
 
-      {/* Filter bar */}
-      <div className="flex gap-2 flex-wrap">
-        <input
-          value={search}
-          onChange={(e) => setSearch(e.target.value)}
-          placeholder="Search ID, area, operator…"
-          className="ctrl-input flex-1"
-          style={{ minWidth: 200 }}
-          aria-label="Search tasks"
-        />
-        <select value={filterDept} onChange={(e) => setFilterDept(e.target.value)} className="ctrl-select" aria-label="Filter by department">
-          <option value="all">All departments</option>
-          {DEPTS.map((d) => <option key={d} value={d}>{d}</option>)}
-        </select>
-        <select value={filterType} onChange={(e) => setFilterType(e.target.value)} className="ctrl-select" aria-label="Filter by type">
-          <option value="all">All types</option>
-          {TYPES.map((t) => <option key={t} value={t}>{t}</option>)}
-        </select>
-        <select value={filterStatus} onChange={(e) => setFilterStatus(e.target.value)} className="ctrl-select" aria-label="Filter by status">
-          <option value="all">All statuses</option>
-          {STATUSES.map((s) => <option key={s} value={s}>{s.charAt(0).toUpperCase() + s.slice(1)}</option>)}
-        </select>
+      {/* Filter + Sort toolbar — single line: search + filters + 5 sort dropdowns */}
+      <div
+        className="card"
+        style={{ padding: "10px 12px" }}
+      >
+        <div className="flex gap-2 flex-wrap items-center">
+          <input
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+            placeholder="Search ID, area, operator…"
+            className="ctrl-input"
+            style={{ flex: "1.4 1 170px", minWidth: 150, height: 40, padding: "8px 14px", fontSize: 13 }}
+            aria-label="Search tasks"
+          />
+          <select value={filterDept} onChange={(e) => setFilterDept(e.target.value)} className="ctrl-select" style={{ flex: "1 1 130px", minWidth: 120, height: 40, padding: "8px 12px", fontSize: 13 }} aria-label="Filter by department">
+            <option value="all">All departments</option>
+            {DEPTS.map((d) => <option key={d} value={d}>{d}</option>)}
+          </select>
+          <select value={filterType} onChange={(e) => setFilterType(e.target.value)} className="ctrl-select" style={{ flex: "1 1 130px", minWidth: 120, height: 40, padding: "8px 12px", fontSize: 13 }} aria-label="Filter by type">
+            <option value="all">All types</option>
+            {TYPES.map((t) => <option key={t} value={t}>{t}</option>)}
+          </select>
+          <select value={filterStatus} onChange={(e) => setFilterStatus(e.target.value)} className="ctrl-select" style={{ flex: "1 1 130px", minWidth: 120, height: 40, padding: "8px 12px", fontSize: 13 }} aria-label="Filter by status">
+            <option value="all">All statuses</option>
+            {STATUSES.map((s) => <option key={s} value={s}>{s.charAt(0).toUpperCase() + s.slice(1)}</option>)}
+          </select>
+          <span aria-hidden="true" style={{ width: 1, height: 24, background: "#E2E8F0", flexShrink: 0 }} />
+          <select
+            value={sortAlpha}
+            onChange={(e) => {
+              const v = e.target.value as AlphaSel;
+              setSortAlpha(v);
+              if (v !== "default") { setSortSubmitted("default"); setSortDue("default"); setSortUpdated("default"); setSortId("default"); }
+            }}
+            className="ctrl-select"
+            style={{
+              height: 40, padding: "8px 10px", fontSize: 13, flex: "0.9 1 108px", minWidth: 104,
+              ...(sortAlpha !== "default" ? { borderColor: "#2563EB", background: "#EFF6FF", fontWeight: 600 } : {}),
+            }}
+            aria-label="Sort A to Z"
+          >
+            <option value="default">A–Z: off</option>
+            <option value="area-az">A to Z</option>
+            <option value="area-za">Z to A</option>
+          </select>
+          <select
+            value={sortSubmitted}
+            onChange={(e) => {
+              const v = e.target.value as SubmittedSel;
+              setSortSubmitted(v);
+              if (v !== "default") { setSortAlpha("default"); setSortDue("default"); setSortUpdated("default"); setSortId("default"); }
+            }}
+            className="ctrl-select"
+            style={{
+              height: 40, padding: "8px 10px", fontSize: 13, flex: "0.9 1 108px", minWidth: 104,
+              ...(sortSubmitted !== "default" ? { borderColor: "#2563EB", background: "#EFF6FF", fontWeight: 600 } : {}),
+            }}
+            aria-label="Sort by submission date"
+          >
+            <option value="default">Submission date</option>
+            <option value="submitted-newest">Newest first</option>
+            <option value="submitted-oldest">Oldest first</option>
+          </select>
+          <select
+            value={sortDue}
+            onChange={(e) => {
+              const v = e.target.value as DueSel;
+              setSortDue(v);
+              if (v !== "default") { setSortAlpha("default"); setSortSubmitted("default"); setSortUpdated("default"); setSortId("default"); }
+            }}
+            className="ctrl-select"
+            style={{
+              height: 40, padding: "8px 10px", fontSize: 13, flex: "0.9 1 108px", minWidth: 104,
+              ...(sortDue !== "default" ? { borderColor: "#2563EB", background: "#EFF6FF", fontWeight: 600 } : {}),
+            }}
+            aria-label="Sort by due date"
+          >
+            <option value="default">Due date</option>
+            <option value="due-soonest">Soonest first</option>
+            <option value="expiring-first">Expiring first</option>
+          </select>
+          <select
+            value={sortUpdated}
+            onChange={(e) => {
+              const v = e.target.value as UpdatedSel;
+              setSortUpdated(v);
+              if (v !== "default") { setSortAlpha("default"); setSortSubmitted("default"); setSortDue("default"); setSortId("default"); }
+            }}
+            className="ctrl-select"
+            style={{
+              height: 40, padding: "8px 10px", fontSize: 13, flex: "0.9 1 108px", minWidth: 104,
+              ...(sortUpdated !== "default" ? { borderColor: "#2563EB", background: "#EFF6FF", fontWeight: 600 } : {}),
+            }}
+            aria-label="Sort by last update"
+          >
+            <option value="default">Last update</option>
+            <option value="updated-recent">Recent first</option>
+            <option value="updated-oldest">Oldest first</option>
+          </select>
+          <select
+            value={sortId}
+            onChange={(e) => {
+              const v = e.target.value as IdSel;
+              setSortId(v);
+              if (v !== "default") { setSortAlpha("default"); setSortSubmitted("default"); setSortDue("default"); setSortUpdated("default"); }
+            }}
+            className="ctrl-select"
+            style={{
+              height: 40, padding: "8px 10px", fontSize: 13, flex: "0.9 1 108px", minWidth: 104,
+              ...(sortId !== "default" ? { borderColor: "#2563EB", background: "#EFF6FF", fontWeight: 600 } : {}),
+            }}
+            aria-label="Sort by Task ID"
+          >
+            <option value="default">Task ID</option>
+            <option value="id-asc">Ascending</option>
+            <option value="id-desc">Descending</option>
+          </select>
+          {hasActiveSort && (
+            <button
+              onClick={clearSorts}
+              className="btn-ghost"
+              style={{ fontSize: 12, padding: "4px 8px", flexShrink: 0 }}
+              title="Clear all sorting"
+            >
+              Clear ✕
+            </button>
+          )}
+        </div>
       </div>
 
       {/* Desktop Table View (≥ md) */}
