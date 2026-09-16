@@ -15,7 +15,7 @@ export default function TaskDetailPage() {
   const id = Array.isArray(params.id) ? params.id[0] : params.id;
   const {
     getTask, role, cloneTask, transitionTask, pushToast,
-    remarks, logs, addRemark, certsForTask, toggleCertVerified,
+    remarks, logs, addRemark,
   } = useApp();
   const [remark, setRemark] = useState("");
   const [confirming, setConfirming] = useState<StatusAction | null>(null);
@@ -43,7 +43,6 @@ export default function TaskDetailPage() {
 
   const taskRemarks = [...(remarks[task.id] || [])].sort((a, b) => a.ts.localeCompare(b.ts));
   const taskLogs = [...(logs[task.id] || [])].sort((a, b) => a.ts.localeCompare(b.ts));
-  const taskCerts = certsForTask(task.id);
   const actions = allowedActions(task.status, role);
   const canClone = can(role, "clone");
   const isExpired = task.status === "expired";
@@ -229,65 +228,6 @@ export default function TaskDetailPage() {
         </div>
       </div>
 
-      {/* Certificate checklist (live from registry) */}
-      <div className="card p-5">
-        <div className="text-sm font-semibold mb-1" style={{ color: "var(--text)" }}>Certificate verification checklist</div>
-        <p className="text-xs mb-4" style={{ color: "#6B7280" }}>
-          Linked certificates from the registry — verification here updates the Certificate Registry.
-        </p>
-        {taskCerts.length === 0 ? (
-          <div className="text-sm p-6 text-center rounded-md" style={{ background: "var(--bg)", border: "1px solid var(--border)", color: "#6B7280" }}>
-            No certificates linked to this task yet.
-          </div>
-        ) : (
-          <div className="table-wrap">
-            <table>
-              <thead>
-                <tr>
-                  <th>Certificate type</th><th>Number</th>
-                  <th>Issuing authority</th><th>Issued</th><th>Expiry</th><th>Status</th><th>Verified</th>
-                </tr>
-              </thead>
-              <tbody>
-                {taskCerts.map((cert) => (
-                  <tr key={cert.id}>
-                    <td><span className="text-sm" style={{ color: "var(--text)" }}>{cert.type}</span></td>
-                    <td><span className="text-xs font-semibold" style={{ color: "var(--text)" }}>{cert.id}</span></td>
-                    <td><span className="text-xs" style={{ color: "#6B7280" }}>{cert.issuer}</span></td>
-                    <td><span className="text-xs" style={{ color: "#6B7280" }}>{cert.issued}</span></td>
-                    <td>
-                      <span
-                        className="text-xs"
-                        style={{
-                          color: cert.expiry <= "2024-12-14" ? "#D64545" : "#6B7280",
-                          fontWeight: cert.expiry <= "2024-12-14" ? 600 : 400,
-                        }}
-                      >
-                        {cert.expiry}
-                      </span>
-                    </td>
-                    <td><StatusBadge status={cert.status} /></td>
-                    <td>
-                      <button
-                        onClick={() => {
-                          toggleCertVerified(cert.id);
-                          pushToast(cert.verified ? `${cert.id} marked unverified` : `${cert.id} marked verified`);
-                        }}
-                        aria-pressed={cert.verified}
-                        aria-label={`Toggle verification for ${cert.id}`}
-                      >
-                        <span className={`badge ${cert.verified ? "badge-yellow" : "badge-grey"}`}>
-                          {cert.verified ? "Verified" : "Unverified"}
-                        </span>
-                      </button>
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-        )}
-      </div>
 
       {/* Remark History + Action History — kept strictly separate:
           remarks are free-text notes only; status changes live in the action log. */}
