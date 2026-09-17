@@ -53,9 +53,48 @@ export interface Toast {
   message: string;
 }
 
-/* ── Demo clock (mock data lives in Dec 2024) ──────────────── */
-export const TODAY = "2024-12-13";
-export const TOMORROW = "2024-12-14";
+/* ── Real-world clock ────────────────────────────────────────
+   TODAY/TOMORROW are derived from the device clock at load time.
+   Seed dates below are written as rel("<frozen date>"), which keeps
+   each record's original offset from the old demo clock (2024-12-13)
+   but rebased onto today — so overdue / due-tomorrow behaviour stays
+   correct no matter when the app is opened. */
+const ANCHOR = "2024-12-13"; // original demo-clock date; seed offsets measured from here
+
+function isoDay(d: Date): string {
+  const y = String(d.getFullYear());
+  const m = String(d.getMonth() + 1).padStart(2, "0");
+  const day = String(d.getDate()).padStart(2, "0");
+  return `${y}-${m}-${day}`;
+}
+
+function addDaysISO(iso: string, days: number): string {
+  const [y, m, d] = iso.split("-").map(Number);
+  const dt = new Date(y, m - 1, d);
+  dt.setDate(dt.getDate() + days);
+  return isoDay(dt);
+}
+
+function diffDaysISO(from: string, to: string): number {
+  const [fy, fm, fd] = from.split("-").map(Number);
+  const [ty, tm, td] = to.split("-").map(Number);
+  const a = new Date(fy, fm - 1, fd);
+  const b = new Date(ty, tm - 1, td);
+  return Math.round((b.getTime() - a.getTime()) / 86400000);
+}
+
+export const TODAY = isoDay(new Date());
+export const TOMORROW = addDaysISO(TODAY, 1);
+
+/** Rebase a frozen "YYYY-MM-DD" seed date onto the real today, preserving its offset from ANCHOR. */
+function rel(seedDate: string): string {
+  return addDaysISO(TODAY, diffDaysISO(ANCHOR, seedDate));
+}
+
+/** Same as rel(), but preserves the "YYYY-MM-DD HH:MM" log timestamp shape. */
+function relTs(seedTs: string): string {
+  return rel(seedTs.slice(0, 10)) + seedTs.slice(10);
+}
 
 export function nowStamp(): string {
   const d = new Date();
@@ -123,76 +162,76 @@ export function pendingForRole(tasks: Task[], role: Role): Task[] {
 
 /* ── Seed data ─────────────────────────────────────────────── */
 const SEED_TASKS: Task[] = [
-  { id: "TSK-2024-0847", area: "Unit-3 Reformer",      dept: "Maintenance",  type: "Hot Work Permit",      shortDesc: "Replacement of corroded heat exchanger tubes — E-301A", submitted: "2024-12-09", validityStart: "2024-12-09", validityEnd: "2024-12-16", status: "pending",   assignee: "Ahmed Al-Rashidi",     assigneeRole: "Requester" },
-  { id: "TSK-2024-0851", area: "Crude Distillation",    dept: "Operations",   type: "Confined Space Entry", shortDesc: "Vessel entry for tray inspection — C-101",               submitted: "2024-12-10", validityStart: "2024-12-10", validityEnd: "2024-12-17", status: "ongoing",   assignee: "Samir Okafor",          assigneeRole: "Receiver"  },
-  { id: "TSK-2024-0839", area: "Hydrogen Plant",         dept: "Safety",       type: "Cold Work Permit",     shortDesc: "Valve gland repacking — H2 header",                      submitted: "2024-12-08", validityStart: "2024-12-08", validityEnd: "2024-12-15", status: "submitted", assignee: "Fatima Al-Zahrawi",     assigneeRole: "Requester" },
-  { id: "TSK-2024-0862", area: "Storage Tank Farm",      dept: "Inspection",   type: "Height Work Permit",   shortDesc: "Tank roof seal inspection — TK-204",                     submitted: "2024-12-11", validityStart: "2024-12-11", validityEnd: "2024-12-18", status: "approved",  assignee: "Col. James Harrington", assigneeRole: "Approver"  },
-  { id: "TSK-2024-0855", area: "Flare Stack",            dept: "HSE",          type: "Hot Work Permit",      shortDesc: "Pilot burner replacement — FL-01",                       submitted: "2024-12-10", validityStart: "2024-12-10", validityEnd: "2024-12-17", status: "ongoing",   assignee: "Nadia Petrov",          assigneeRole: "Receiver"  },
-  { id: "TSK-2024-0831", area: "LPG Sphere Farm",        dept: "Maintenance",  type: "Excavation Permit",    shortDesc: "Underground line exposure — SP-07",                      submitted: "2024-12-07", validityStart: "2024-12-07", validityEnd: "2024-12-14", status: "expired",   assignee: "Omar Khalid",           assigneeRole: "Requester" },
-  { id: "TSK-2024-0868", area: "Amine Treating Unit",    dept: "Operations",   type: "Electrical Isolation", shortDesc: "Motor isolation for pump P-312 overhaul",                submitted: "2024-12-12", validityStart: "2024-12-12", validityEnd: "2024-12-13", status: "submitted", assignee: "Ahmed Al-Rashidi",      assigneeRole: "Requester" },
-  { id: "TSK-2024-0871", area: "Naphtha Hydrotreater",   dept: "Engineering",  type: "Hot Work Permit",      shortDesc: "Pipe support welding — NHT pipe rack",                   submitted: "2024-12-12", validityStart: "2024-12-12", validityEnd: "2024-12-13", status: "returned",  assignee: "Eng. Layla Mansour",    assigneeRole: "Approver"  },
-  { id: "TSK-2024-0875", area: "Cooling Tower",          dept: "Utilities",    type: "Cold Work Permit",     shortDesc: "Fan blade balancing — CT-02",                            submitted: "2024-12-13", validityStart: "2024-12-13", validityEnd: "2024-12-14", status: "approved",  assignee: "Samir Okafor",          assigneeRole: "Receiver"  },
-  { id: "TSK-2024-0822", area: "Crude Pipeline",         dept: "Pipeline",     type: "Confined Space Entry", shortDesc: "Valve pit inspection — ML-12",                           submitted: "2024-12-06", validityStart: "2024-12-06", validityEnd: "2024-12-07", status: "closed",    assignee: "Nadia Petrov",          assigneeRole: "Receiver"  },
-  { id: "TSK-2024-0879", area: "Diesel Hydrotreater",    dept: "Maintenance",  type: "Hot Work Permit",      shortDesc: "Flange replacement — DHT feed line",                     submitted: "2024-12-13", validityStart: "2024-12-13", validityEnd: "2024-12-14", status: "pending",   assignee: "Fatima Al-Zahrawi",     assigneeRole: "Requester" },
-  { id: "TSK-2024-0881", area: "Vacuum Distillation",    dept: "Operations",   type: "Height Work Permit",   shortDesc: "Platform grating replacement — VDU structure",           submitted: "2024-12-13", validityStart: "2024-12-13", validityEnd: "2024-12-14", status: "submitted", assignee: "Omar Khalid",           assigneeRole: "Requester" },
-  { id: "TSK-2024-0884", area: "Sulfur Recovery",        dept: "Safety",       type: "Excavation Permit",    shortDesc: "Cable trench digging — SRU substation",                  submitted: "2024-12-13", validityStart: "2024-12-13", validityEnd: "2024-12-14", status: "rejected",  assignee: "Col. James Harrington", assigneeRole: "Approver"  },
-  { id: "TSK-2024-0887", area: "Isomerization Unit",     dept: "Engineering",  type: "Electrical Isolation", shortDesc: "Breaker racking for compressor K-401",                   submitted: "2024-12-13", validityStart: "2024-12-13", validityEnd: "2024-12-14", status: "ongoing",   assignee: "Ahmed Al-Rashidi",      assigneeRole: "Requester" },
-  { id: "TSK-2024-0890", area: "Product Loading Bay",    dept: "Logistics",    type: "Cold Work Permit",     shortDesc: "Loading arm seal replacement — Bay 4",                  submitted: "2024-12-13", validityStart: "2024-12-13", validityEnd: "2024-12-14", status: "approved",  assignee: "Eng. Layla Mansour",    assigneeRole: "Approver"  },
+  { id: "1", area: "Unit-3 Reformer",      dept: "Maintenance",  type: "Hot Work Permit",      shortDesc: "Replacement of corroded heat exchanger tubes — E-301A", submitted: rel("2024-12-09"), validityStart: rel("2024-12-09"), validityEnd: rel("2024-12-16"), status: "pending",   assignee: "Ahmed Al-Rashidi",     assigneeRole: "Requester" },
+  { id: "2", area: "Crude Distillation",    dept: "Operations",   type: "Confined Space Entry", shortDesc: "Vessel entry for tray inspection — C-101",               submitted: rel("2024-12-10"), validityStart: rel("2024-12-10"), validityEnd: rel("2024-12-17"), status: "ongoing",   assignee: "Samir Okafor",          assigneeRole: "Receiver"  },
+  { id: "3", area: "Hydrogen Plant",         dept: "Safety",       type: "Cold Work Permit",     shortDesc: "Valve gland repacking — H2 header",                      submitted: rel("2024-12-08"), validityStart: rel("2024-12-08"), validityEnd: rel("2024-12-15"), status: "submitted", assignee: "Fatima Al-Zahrawi",     assigneeRole: "Requester" },
+  { id: "4", area: "Storage Tank Farm",      dept: "Inspection",   type: "Height Work Permit",   shortDesc: "Tank roof seal inspection — TK-204",                     submitted: rel("2024-12-11"), validityStart: rel("2024-12-11"), validityEnd: rel("2024-12-18"), status: "approved",  assignee: "Col. James Harrington", assigneeRole: "Approver"  },
+  { id: "5", area: "Flare Stack",            dept: "HSE",          type: "Hot Work Permit",      shortDesc: "Pilot burner replacement — FL-01",                       submitted: rel("2024-12-10"), validityStart: rel("2024-12-10"), validityEnd: rel("2024-12-17"), status: "ongoing",   assignee: "Nadia Petrov",          assigneeRole: "Receiver"  },
+  { id: "6", area: "LPG Sphere Farm",        dept: "Maintenance",  type: "Excavation Permit",    shortDesc: "Underground line exposure — SP-07",                      submitted: rel("2024-12-07"), validityStart: rel("2024-12-07"), validityEnd: rel("2024-12-14"), status: "expired",   assignee: "Omar Khalid",           assigneeRole: "Requester" },
+  { id: "7", area: "Amine Treating Unit",    dept: "Operations",   type: "Electrical Isolation", shortDesc: "Motor isolation for pump P-312 overhaul",                submitted: rel("2024-12-12"), validityStart: rel("2024-12-12"), validityEnd: rel("2024-12-13"), status: "submitted", assignee: "Ahmed Al-Rashidi",      assigneeRole: "Requester" },
+  { id: "8", area: "Naphtha Hydrotreater",   dept: "Engineering",  type: "Hot Work Permit",      shortDesc: "Pipe support welding — NHT pipe rack",                   submitted: rel("2024-12-12"), validityStart: rel("2024-12-12"), validityEnd: rel("2024-12-13"), status: "returned",  assignee: "Eng. Layla Mansour",    assigneeRole: "Approver"  },
+  { id: "9", area: "Cooling Tower",          dept: "Utilities",    type: "Cold Work Permit",     shortDesc: "Fan blade balancing — CT-02",                            submitted: rel("2024-12-13"), validityStart: rel("2024-12-13"), validityEnd: rel("2024-12-14"), status: "approved",  assignee: "Samir Okafor",          assigneeRole: "Receiver"  },
+  { id: "10", area: "Crude Pipeline",         dept: "Pipeline",     type: "Confined Space Entry", shortDesc: "Valve pit inspection — ML-12",                           submitted: rel("2024-12-06"), validityStart: rel("2024-12-06"), validityEnd: rel("2024-12-07"), status: "closed",    assignee: "Nadia Petrov",          assigneeRole: "Receiver"  },
+  { id: "11", area: "Diesel Hydrotreater",    dept: "Maintenance",  type: "Hot Work Permit",      shortDesc: "Flange replacement — DHT feed line",                     submitted: rel("2024-12-13"), validityStart: rel("2024-12-13"), validityEnd: rel("2024-12-14"), status: "pending",   assignee: "Fatima Al-Zahrawi",     assigneeRole: "Requester" },
+  { id: "12", area: "Vacuum Distillation",    dept: "Operations",   type: "Height Work Permit",   shortDesc: "Platform grating replacement — VDU structure",           submitted: rel("2024-12-13"), validityStart: rel("2024-12-13"), validityEnd: rel("2024-12-14"), status: "submitted", assignee: "Omar Khalid",           assigneeRole: "Requester" },
+  { id: "13", area: "Sulfur Recovery",        dept: "Safety",       type: "Excavation Permit",    shortDesc: "Cable trench digging — SRU substation",                  submitted: rel("2024-12-13"), validityStart: rel("2024-12-13"), validityEnd: rel("2024-12-14"), status: "rejected",  assignee: "Col. James Harrington", assigneeRole: "Approver"  },
+  { id: "14", area: "Isomerization Unit",     dept: "Engineering",  type: "Electrical Isolation", shortDesc: "Breaker racking for compressor K-401",                   submitted: rel("2024-12-13"), validityStart: rel("2024-12-13"), validityEnd: rel("2024-12-14"), status: "ongoing",   assignee: "Ahmed Al-Rashidi",      assigneeRole: "Requester" },
+  { id: "15", area: "Product Loading Bay",    dept: "Logistics",    type: "Cold Work Permit",     shortDesc: "Loading arm seal replacement — Bay 4",                  submitted: rel("2024-12-13"), validityStart: rel("2024-12-13"), validityEnd: rel("2024-12-14"), status: "approved",  assignee: "Eng. Layla Mansour",    assigneeRole: "Approver"  },
 ];
 
 const SEED_CERTS: Cert[] = [
-  { id: "GTC-2024-4421", type: "Gas Test Certificate",             area: "Unit-3 Reformer",     issuer: "Hassan Al-Mutairi",  issued: "2024-12-09", expiry: "2024-12-10", status: "expired",   taskRef: "TSK-2024-0847", verified: false },
-  { id: "GTC-2024-4430", type: "Gas Test Certificate",             area: "Crude Distillation",  issuer: "Rania Jaber",        issued: "2024-12-12", expiry: "2024-12-13", status: "approved",  taskRef: "TSK-2024-0875", verified: true  },
-  { id: "FWA-2024-1183", type: "Fire Watch Authorization",          area: "Unit-3 Reformer",     issuer: "Fire & Safety Dept", issued: "2024-12-09", expiry: "2024-12-16", status: "ongoing",   taskRef: "TSK-2024-0847", verified: true  },
-  { id: "FWA-2024-1190", type: "Fire Watch Authorization",          area: "LPG Sphere Farm",     issuer: "Fire & Safety Dept", issued: "2024-12-07", expiry: "2024-12-14", status: "pending",   taskRef: "TSK-2024-0831", verified: false },
-  { id: "MIC-2024-0872", type: "Mechanical Isolation Certificate",  area: "Unit-3 Reformer",     issuer: "Samir Okafor",       issued: "2024-12-08", expiry: "2024-12-16", status: "approved",  taskRef: "TSK-2024-0847", verified: true  },
-  { id: "MIC-2024-0880", type: "Mechanical Isolation Certificate",  area: "Naphtha Hydrotreater", issuer: "Nadia Petrov",      issued: "2024-12-12", expiry: "2024-12-14", status: "returned",  taskRef: "TSK-2024-0871", verified: false },
-  { id: "EIC-2024-0614", type: "Electrical Isolation Certificate",  area: "Amine Treating Unit", issuer: "Yusuf Al-Hamdan",    issued: "2024-12-12", expiry: "2024-12-13", status: "submitted", taskRef: "TSK-2024-0868", verified: false },
-  { id: "EIC-2024-0620", type: "Electrical Isolation Certificate",  area: "Isomerization Unit",  issuer: "Yusuf Al-Hamdan",    issued: "2024-12-13", expiry: "2024-12-14", status: "approved",  taskRef: "TSK-2024-0887", verified: true  },
-  { id: "GTC-2024-4438", type: "Gas Test Certificate",             area: "Flare Stack",          issuer: "Hassan Al-Mutairi",  issued: "2024-12-10", expiry: "2024-12-17", status: "ongoing",   taskRef: "TSK-2024-0855", verified: true  },
-  { id: "FWA-2024-1195", type: "Fire Watch Authorization",          area: "Diesel Hydrotreater", issuer: "Fire & Safety Dept", issued: "2024-12-13", expiry: "2024-12-14", status: "pending",   taskRef: "TSK-2024-0879", verified: false },
-  { id: "CWP-2024-2201", type: "Cold Work Pre-Check",               area: "Unit-3 Reformer",     issuer: "Eng. Layla Mansour", issued: "2024-12-09", expiry: "2024-12-16", status: "submitted", taskRef: "TSK-2024-0847", verified: false },
+  { id: "1", type: "Gas Test Certificate",             area: "Unit-3 Reformer",     issuer: "Hassan Al-Mutairi",  issued: rel("2024-12-09"), expiry: rel("2024-12-10"), status: "expired",   taskRef: "1", verified: false },
+  { id: "2", type: "Gas Test Certificate",             area: "Crude Distillation",  issuer: "Rania Jaber",        issued: rel("2024-12-12"), expiry: rel("2024-12-13"), status: "approved",  taskRef: "9", verified: true  },
+  { id: "3", type: "Fire Watch Authorization",          area: "Unit-3 Reformer",     issuer: "Fire & Safety Dept", issued: rel("2024-12-09"), expiry: rel("2024-12-16"), status: "ongoing",   taskRef: "1", verified: true  },
+  { id: "4", type: "Fire Watch Authorization",          area: "LPG Sphere Farm",     issuer: "Fire & Safety Dept", issued: rel("2024-12-07"), expiry: rel("2024-12-14"), status: "pending",   taskRef: "6", verified: false },
+  { id: "5", type: "Mechanical Isolation Certificate",  area: "Unit-3 Reformer",     issuer: "Samir Okafor",       issued: rel("2024-12-08"), expiry: rel("2024-12-16"), status: "approved",  taskRef: "1", verified: true  },
+  { id: "6", type: "Mechanical Isolation Certificate",  area: "Naphtha Hydrotreater", issuer: "Nadia Petrov",      issued: rel("2024-12-12"), expiry: rel("2024-12-14"), status: "returned",  taskRef: "8", verified: false },
+  { id: "7", type: "Electrical Isolation Certificate",  area: "Amine Treating Unit", issuer: "Yusuf Al-Hamdan",    issued: rel("2024-12-12"), expiry: rel("2024-12-13"), status: "submitted", taskRef: "7", verified: false },
+  { id: "8", type: "Electrical Isolation Certificate",  area: "Isomerization Unit",  issuer: "Yusuf Al-Hamdan",    issued: rel("2024-12-13"), expiry: rel("2024-12-14"), status: "approved",  taskRef: "14", verified: true  },
+  { id: "9", type: "Gas Test Certificate",             area: "Flare Stack",          issuer: "Hassan Al-Mutairi",  issued: rel("2024-12-10"), expiry: rel("2024-12-17"), status: "ongoing",   taskRef: "5", verified: true  },
+  { id: "10", type: "Fire Watch Authorization",          area: "Diesel Hydrotreater", issuer: "Fire & Safety Dept", issued: rel("2024-12-13"), expiry: rel("2024-12-14"), status: "pending",   taskRef: "11", verified: false },
+  { id: "11", type: "Cold Work Pre-Check",               area: "Unit-3 Reformer",     issuer: "Eng. Layla Mansour", issued: rel("2024-12-09"), expiry: rel("2024-12-16"), status: "submitted", taskRef: "1", verified: false },
 ];
 
 const SEED_REMARKS: Record<string, Remark[]> = {
-  "TSK-2024-0847": [
-    { ts: "2024-12-09 08:14", user: "Ahmed Al-Rashidi",  role: "Requester", text: "Initial submission. All isolation points confirmed with Shift Supervisor. P&ID Rev 7 attached for reference." },
-    { ts: "2024-12-09 10:31", user: "Samir Okafor",       role: "Receiver",  text: "Received and logged. Forwarded to Approver queue. Area walkdown scheduled for 14:00." },
-    { ts: "2024-12-09 15:45", user: "Eng. Layla Mansour", role: "Approver",  text: "HOLD — Gas test certificate must be less than 4 hours old at time of work start. Please resubmit with gas test certificate dated day-of-work." },
-    { ts: "2024-12-10 07:55", user: "Ahmed Al-Rashidi",  role: "Requester", text: "Noted. Gas test cert will be obtained from HSE on day of work. No other changes to scope." },
+  "1": [
+    { ts: relTs("2024-12-09 08:14"), user: "Ahmed Al-Rashidi",  role: "Requester", text: "Initial submission. All isolation points confirmed with Shift Supervisor. P&ID Rev 7 attached for reference." },
+    { ts: relTs("2024-12-09 10:31"), user: "Samir Okafor",       role: "Receiver",  text: "Received and logged. Forwarded to Approver queue. Area walkdown scheduled for 14:00." },
+    { ts: relTs("2024-12-09 15:45"), user: "Eng. Layla Mansour", role: "Approver",  text: "HOLD — Gas test certificate must be less than 4 hours old at time of work start. Please resubmit with gas test certificate dated day-of-work." },
+    { ts: relTs("2024-12-10 07:55"), user: "Ahmed Al-Rashidi",  role: "Requester", text: "Noted. Gas test cert will be obtained from HSE on day of work. No other changes to scope." },
   ],
 };
 
 const SEED_LOGS: Record<string, LogEntry[]> = {
-  "TSK-2024-0847": [
-    { ts: "2024-12-09 08:14", user: "Ahmed Al-Rashidi",   action: "Created",     from: null,        to: "Created"   },
-    { ts: "2024-12-09 08:18", user: "Ahmed Al-Rashidi",   action: "Submitted",   from: "Created",   to: "Submitted" },
-    { ts: "2024-12-09 10:31", user: "Samir Okafor",        action: "Received",    from: "Submitted", to: "Received"  },
-    { ts: "2024-12-09 15:47", user: "Eng. Layla Mansour",  action: "Returned",    from: "Received",  to: "Returned", detail: "Gas test certificate must be less than 4 hours old at time of work start." },
-    { ts: "2024-12-10 07:57", user: "Ahmed Al-Rashidi",   action: "Submitted", from: "Returned",  to: "Submitted" },
+  "1": [
+    { ts: relTs("2024-12-09 08:14"), user: "Ahmed Al-Rashidi",   action: "Created",     from: null,        to: "Created"   },
+    { ts: relTs("2024-12-09 08:18"), user: "Ahmed Al-Rashidi",   action: "Submitted",   from: "Created",   to: "Submitted" },
+    { ts: relTs("2024-12-09 10:31"), user: "Samir Okafor",        action: "Received",    from: "Submitted", to: "Received"  },
+    { ts: relTs("2024-12-09 15:47"), user: "Eng. Layla Mansour",  action: "Returned",    from: "Received",  to: "Returned", detail: "Gas test certificate must be less than 4 hours old at time of work start." },
+    { ts: relTs("2024-12-10 07:57"), user: "Ahmed Al-Rashidi",   action: "Submitted", from: "Returned",  to: "Submitted" },
   ],
-  "TSK-2024-0884": [
-    { ts: "2024-12-13 08:05", user: "Omar Khalid",           action: "Created",   from: null,        to: "Created"   },
-    { ts: "2024-12-13 08:20", user: "Omar Khalid",           action: "Submitted", from: "Created",   to: "Submitted" },
-    { ts: "2024-12-13 11:02", user: "Samir Okafor",          action: "Received",  from: "Submitted", to: "Received"  },
-    { ts: "2024-12-13 13:40", user: "Samir Okafor",          action: "Rejected",  from: "Received",  to: "Rejected", detail: "Cable route crosses live instrument loop — reroute required." },
+  "13": [
+    { ts: relTs("2024-12-13 08:05"), user: "Omar Khalid",           action: "Created",   from: null,        to: "Created"   },
+    { ts: relTs("2024-12-13 08:20"), user: "Omar Khalid",           action: "Submitted", from: "Created",   to: "Submitted" },
+    { ts: relTs("2024-12-13 11:02"), user: "Samir Okafor",          action: "Received",  from: "Submitted", to: "Received"  },
+    { ts: relTs("2024-12-13 13:40"), user: "Samir Okafor",          action: "Rejected",  from: "Received",  to: "Rejected", detail: "Cable route crosses live instrument loop — reroute required." },
   ],
-  "TSK-2024-0871": [
-    { ts: "2024-12-12 08:05", user: "Eng. Layla Mansour", action: "Created",   from: null,        to: "Created"   },
-    { ts: "2024-12-12 08:20", user: "Eng. Layla Mansour", action: "Submitted", from: "Created",   to: "Submitted" },
-    { ts: "2024-12-12 10:12", user: "Samir Okafor",       action: "Received",  from: "Submitted", to: "Received"  },
-    { ts: "2024-12-12 14:55", user: "Eng. Layla Mansour", action: "Returned",  from: "Received",  to: "Returned", detail: "Missing single-line diagram for breaker K-401." },
+  "8": [
+    { ts: relTs("2024-12-12 08:05"), user: "Eng. Layla Mansour", action: "Created",   from: null,        to: "Created"   },
+    { ts: relTs("2024-12-12 08:20"), user: "Eng. Layla Mansour", action: "Submitted", from: "Created",   to: "Submitted" },
+    { ts: relTs("2024-12-12 10:12"), user: "Samir Okafor",       action: "Received",  from: "Submitted", to: "Received"  },
+    { ts: relTs("2024-12-12 14:55"), user: "Eng. Layla Mansour", action: "Returned",  from: "Received",  to: "Returned", detail: "Missing single-line diagram for breaker K-401." },
   ],
-  "TSK-2024-0862": [
-    { ts: "2024-12-11 08:05", user: "Col. James Harrington", action: "Created",   from: null,        to: "Created"   },
-    { ts: "2024-12-11 08:20", user: "Col. James Harrington", action: "Submitted", from: "Created",   to: "Submitted" },
-    { ts: "2024-12-11 09:44", user: "Samir Okafor",          action: "Received",  from: "Submitted", to: "Received"  },
-    { ts: "2024-12-12 09:15", user: "Col. James Harrington", action: "Approved",  from: "Received",  to: "Approved"  },
+  "4": [
+    { ts: relTs("2024-12-11 08:05"), user: "Col. James Harrington", action: "Created",   from: null,        to: "Created"   },
+    { ts: relTs("2024-12-11 08:20"), user: "Col. James Harrington", action: "Submitted", from: "Created",   to: "Submitted" },
+    { ts: relTs("2024-12-11 09:44"), user: "Samir Okafor",          action: "Received",  from: "Submitted", to: "Received"  },
+    { ts: relTs("2024-12-12 09:15"), user: "Col. James Harrington", action: "Approved",  from: "Received",  to: "Approved"  },
   ],
-  "TSK-2024-0868": [
-    { ts: "2024-12-12 08:05", user: "Ahmed Al-Rashidi", action: "Created",   from: null,      to: "Created" },
-    { ts: "2024-12-12 08:20", user: "Ahmed Al-Rashidi", action: "Submitted", from: "Created", to: "Submitted" },
-    { ts: "2024-12-12 12:30", user: "Samir Okafor",     action: "Received",  from: "Submitted", to: "Received" },
+  "7": [
+    { ts: relTs("2024-12-12 08:05"), user: "Ahmed Al-Rashidi", action: "Created",   from: null,      to: "Created" },
+    { ts: relTs("2024-12-12 08:20"), user: "Ahmed Al-Rashidi", action: "Submitted", from: "Created", to: "Submitted" },
+    { ts: relTs("2024-12-12 12:30"), user: "Samir Okafor",     action: "Received",  from: "Submitted", to: "Received" },
   ],
 };
 
@@ -242,7 +281,7 @@ function readSession(key: string, fallback: string): string {
 }
 
 let toastSeq = 1;
-let taskSeq = 891;
+let taskSeq = 16;
 
 export function AppProvider({ children }: { children: React.ReactNode }) {
   // Fallback-only initial state so the first client render matches the
@@ -299,12 +338,12 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     const manualId = data.id?.trim();
     const task: Task = {
       ...data,
-      id: manualId || `TSK-2024-${String(taskSeq++).padStart(4, "0")}`,
+      id: manualId || String(taskSeq++),
       status: "created",
       submitted: TODAY,
     };
     // Keep the auto-sequence ahead of any manually entered numeric suffix
-    // so future auto IDs never collide (e.g. operator types TSK-2024-0895).
+    // so future auto IDs never collide (e.g. operator types 42).
     if (manualId) {
       const m = manualId.match(/(\d+)\s*$/);
       if (m) {
@@ -324,7 +363,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     if (!src) return null;
     const task: Task = {
       ...src,
-      id: `TSK-2024-${String(taskSeq++).padStart(4, "0")}`,
+      id: String(taskSeq++),
       status: "created",
       submitted: TODAY,
       validityStart: TODAY,
@@ -338,7 +377,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
   }, [tasks]);
 
   const peekNextTaskId = useCallback(() => {
-    return `TSK-2024-${String(taskSeq).padStart(4, "0")}`;
+    return String(taskSeq);
   }, []);
 
   const transitionTask = useCallback((id: string, action: StatusAction, reason?: string) => {

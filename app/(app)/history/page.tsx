@@ -1,7 +1,7 @@
 "use client";
 import { useMemo, useState } from "react";
 import Link from "next/link";
-import { cap, useApp } from "../../store/AppStore";
+import { cap, TODAY, useApp } from "../../store/AppStore";
 
 interface FlatEntry {
   taskId: string;
@@ -192,7 +192,7 @@ export default function HistoryPage() {
       </div>
 
       <div className="text-xs" style={{ color: "#9CA3AF" }}>
-        Read as: “{cap("samir")} rejected TSK-2024-0868 on 2024-12-12” — each row names the actor, action, task, and date.
+        Read as: “{cap("samir")} rejected task 13 on {TODAY}” — each row names the actor, action, task, and date.
       </div>
     </div>
   );

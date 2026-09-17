@@ -131,6 +131,7 @@ export default function NewTaskModal({ onClose }: { onClose: () => void }) {
                   onChange={(e) => set("taskId", e.target.value)}
                   className="ctrl-input w-full"
                   placeholder={`e.g. ${suggestedId}`}
+                  inputMode="numeric"
                   aria-label="Task ID, entered manually"
                   aria-describedby="new-taskid-hint"
                   autoComplete="off"

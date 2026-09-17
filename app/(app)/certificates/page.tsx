@@ -2,7 +2,7 @@
 import { useEffect, useState } from "react";
 import Link from "next/link";
 import StatusBadge from "../../components/StatusBadge";
-import { can, cap, useApp, type Cert } from "../../store/AppStore";
+import { can, cap, TODAY, useApp, type Cert } from "../../store/AppStore";
 
 const CERT_TYPES = [
   "Gas Test Certificate",
@@ -199,8 +199,8 @@ export default function CertificatesPage() {
                     <span
                       className="text-xs"
                       style={{
-                        color: cert.expiry <= "2024-12-13" ? "#D64545" : "var(--text)",
-                        fontWeight: cert.expiry <= "2024-12-13" ? 600 : 400,
+                        color: cert.expiry <= TODAY ? "#D64545" : "var(--text)",
+                        fontWeight: cert.expiry <= TODAY ? 600 : 400,
                       }}
                     >
                       {cert.expiry}
@@ -246,7 +246,7 @@ export default function CertificatesPage() {
           </div>
         ) : (
           filtered.map((cert) => {
-            const isExpiring = cert.expiry <= "2024-12-13";
+            const isExpiring = cert.expiry <= TODAY;
             return (
               <div key={cert.id} className="card-interactive p-4">
                 <div className="flex items-center justify-between mb-2">

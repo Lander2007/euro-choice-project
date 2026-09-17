@@ -30,7 +30,7 @@ export default function TasksPage() {
   const [filterType,   setFilterType]   = useState("all");
   const [filterStatus, setFilterStatus] = useState("all");
   const [view,         setView]         = useState<View>("all");
-  type AlphaSel = "default" | "area-az" | "area-za";
+  type AlphaSel = "default" | "name-az" | "name-za";
   type SubmittedSel = "default" | "submitted-newest" | "submitted-oldest";
   type DueSel = "default" | "due-soonest" | "expiring-first";
   type UpdatedSel = "default" | "updated-recent" | "updated-oldest";
@@ -80,6 +80,17 @@ export default function TasksPage() {
     return entries && entries.length > 0 ? entries[entries.length - 1].ts : "";
   };
 
+  // Task IDs are plain integers ("1", "2", …) — compare numerically so
+  // "10" sorts after "9"; fall back to text order for custom manual IDs.
+  const compareTaskIds = (x: string, y: string) => {
+    const nx = parseInt(x, 10);
+    const ny = parseInt(y, 10);
+    if (!Number.isNaN(nx) && !Number.isNaN(ny) && String(nx) === x.trim() && String(ny) === y.trim()) {
+      return nx - ny;
+    }
+    return x.localeCompare(y);
+  };
+
   const clearAll = () => {
     setSearch("");
     setFilterDept("all");
@@ -108,8 +119,8 @@ export default function TasksPage() {
   if (activeSort !== "default") {
     filtered = [...filtered].sort((a, b) => {
       switch (activeSort) {
-        case "area-az":          return a.area.localeCompare(b.area);
-        case "area-za":          return b.area.localeCompare(a.area);
+        case "name-az":          return a.assignee.localeCompare(b.assignee);
+        case "name-za":          return b.assignee.localeCompare(a.assignee);
         case "submitted-newest": return b.submitted.localeCompare(a.submitted);
         case "submitted-oldest": return a.submitted.localeCompare(b.submitted);
         case "due-soonest":      return a.validityEnd.localeCompare(b.validityEnd);
@@ -119,8 +130,8 @@ export default function TasksPage() {
         }
         case "updated-recent":   return lastTs(b.id).localeCompare(lastTs(a.id));
         case "updated-oldest":   return lastTs(a.id).localeCompare(lastTs(b.id));
-        case "id-asc":           return a.id.localeCompare(b.id);
-        case "id-desc":          return b.id.localeCompare(a.id);
+        case "id-asc":           return compareTaskIds(a.id, b.id);
+        case "id-desc":          return compareTaskIds(b.id, a.id);
         default: return 0;
       }
     });
@@ -232,11 +243,11 @@ export default function TasksPage() {
               height: 40, padding: "8px 10px", fontSize: 13, flex: "0.9 1 108px", minWidth: 104,
               ...(sortAlpha !== "default" ? { borderColor: "#2563EB", background: "#EFF6FF", fontWeight: 600 } : {}),
             }}
-            aria-label="Sort A to Z"
+            aria-label="Sort by assignee name"
           >
-            <option value="default">A–Z: off</option>
-            <option value="area-az">A to Z</option>
-            <option value="area-za">Z to A</option>
+            <option value="default">Name A–Z: off</option>
+            <option value="name-az">A to Z</option>
+            <option value="name-za">Z to A</option>
           </select>
           <select
             value={sortSubmitted}
