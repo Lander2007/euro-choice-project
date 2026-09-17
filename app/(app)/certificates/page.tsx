@@ -1,6 +1,7 @@
 "use client";
 import { useEffect, useState } from "react";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import StatusBadge from "../../components/StatusBadge";
 import { can, cap, TODAY, useApp, type Cert } from "../../store/AppStore";
 
@@ -81,6 +82,19 @@ function VerifyModal({ cert, onClose }: { cert: Cert; onClose: () => void }) {
 }
 
 export default function CertificatesPage() {
+  const router = useRouter();
+
+  // Certificates section is hidden from the web; redirect immediately
+  useEffect(() => {
+    router.replace("/dashboard");
+  }, [router]);
+
+  return null;
+}
+
+// Retained without deletion for future restoration:
+// eslint-disable-next-line @typescript-eslint/no-unused-vars
+function _OriginalCertificatesView() {
   const { certs, role } = useApp();
   const [filterType,  setFilterType]  = useState("all");
   const [selectedCert, setSelected]  = useState<Cert | null>(null);

@@ -78,8 +78,8 @@ export default function DashboardPage() {
         </div>
       </div>
 
-      {/* ── 4 Clean ERP Metric Tiles (Zero Vanity Analysis) ── */}
-      <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 md:gap-4">
+      {/* ── 3 Clean ERP Metric Tiles ── */}
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 md:gap-4">
         {/* Tile 1: Awaiting My Role's Action */}
         <div className={`kpi-tile ${myPendingTasks.length > 0 ? "highlight" : ""}`}>
           <div className="flex items-center justify-between">
@@ -142,7 +142,7 @@ export default function DashboardPage() {
           <span className="text-xs font-medium text-red-600">Urgent renewals</span>
         </div>
 
-        {/* Tile 4: Certificate Compliance */}
+        {/* Tile 4: Certificate Compliance — Hidden from UI (retained in code)
         <div className="kpi-tile">
           <div className="flex items-center justify-between">
             <span className="section-label">Certificates</span>
@@ -160,6 +160,7 @@ export default function DashboardPage() {
             Cert registry →
           </Link>
         </div>
+        */}
       </div>
 
       {/* ── Operational Action Queue ── */}

@@ -3,7 +3,7 @@ import { useApp } from "../../store/AppStore";
 
 const ROLES = ["Requester", "Receiver", "Approver", "Admin"];
 
-const ACTIONS = [
+const ALL_ACTIONS = [
   { id: "create",       label: "Create Task",         desc: "Open a new permit-to-work request",           category: "Workflow" },
   { id: "submit",       label: "Submit",              desc: "Forward request to the receiver queue",       category: "Workflow" },
   { id: "receive",      label: "Receive",             desc: "Log and process an incoming task submission", category: "Workflow" },
@@ -17,6 +17,9 @@ const ACTIONS = [
   { id: "manage_users", label: "Manage Users",        desc: "Create, edit, and assign user accounts",     category: "Access"   },
   { id: "export",       label: "Export Data",         desc: "Download reports and data extracts",          category: "Access"   },
 ];
+
+// Certificates action hidden from UI display (retained in code without deleting)
+const ACTIONS = ALL_ACTIONS.filter((a) => a.id !== "verify_cert");
 
 const PERMISSIONS: Record<string, string[]> = {
   Requester: ["create", "submit", "clone"],
@@ -43,14 +46,14 @@ export default function RolesPage() {
       <div>
         <h1 className="page-title">Roles &amp; permissions matrix</h1>
         <p className="page-subtitle">
-          Access control — system authorisation matrix — 4 roles × 12 permissions
+          Access control — system authorisation matrix — 4 roles × {ACTIONS.length} permissions
         </p>
       </div>
 
       {/* Role summary cards */}
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
         {ROLES.map((role) => {
-          const count = PERMISSIONS[role].length;
+          const count = ACTIONS.filter((a) => PERMISSIONS[role]?.includes(a.id)).length;
           const pct   = Math.round((count / ACTIONS.length) * 100);
           const isCurrent = role.toLowerCase() === activeRole;
           return (
